@@ -1,0 +1,15 @@
+# Python
+.ipynb_checkpoints
+*__pycache__/
+
+# vscode
+rsconnect/
+
+# local folders
+input_files/
+output_files/
+make_file_deployment.sh
+
+# local files
+Metadata.xlsx
+~$Metadata.xlsx
