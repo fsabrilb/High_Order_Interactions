@@ -13,7 +13,7 @@ make_file_deployment.sh
 # local files
 Metadata.xlsx
 ~$Metadata.xlsx
-./scripts/proof.ipynb
-./scripts/track_particles.ipynb
-./scripts/Pairs_interactions_IbM.ipynb
-./scripts/simulate_hoi_model.ipynb
+scripts/proof.ipynb
+scripts/track_particles.ipynb
+scripts/Pairs_interactions_IbM.ipynb
+scripts/simulate_hoi_model.ipynb
