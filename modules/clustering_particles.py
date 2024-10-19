@@ -28,6 +28,7 @@ def update_contours(
     df_tracked_2: pd.DataFrame,
     type: str = "equalized",
     clip_limit: float = 0.2,
+    distance_threshold: float = 90,
     similarity_threshold: float = 0.95
 ) -> pd.DataFrame:
     """Update contours using two tracked frames. In both cases, the data has
@@ -76,6 +77,9 @@ def update_contours(
     clip_limit : float
         Clipping limit, normalized between 0 and 1 (higher values give more
         contrast). Defalut value is None
+    distance_threshold : float
+        Maximmum distance in X-axis or Y-axis allowed between identical IDs
+        Default value is 90
     similarity_threshold : float
         Structural similarity lower bound between identical IDs contours
         allowed. Default value is 0.95
@@ -144,6 +148,21 @@ def update_contours(
         img_1 = img_1[x_min_1: (x_min_1 + rank_x), y_min_1: (y_min_1 + rank_y)]
         img_2 = img_2[x_min_2: (x_min_2 + rank_x), y_min_2: (y_min_2 + rank_y)]
 
+        # Update positions if they are very far away
+        distance_x = df_aux_2["position_x"].values[0] - df_aux_1["position_x"].values[0]  # noqa: 501
+        distance_y = df_aux_2["position_y"].values[0] - df_aux_1["position_y"].values[0]  # noqa: 501
+        mask = ((np.abs(distance_x) >= distance_threshold) | (np.abs(distance_y) >= distance_threshold))  # noqa: 501
+        if mask:
+            df_aux_2["position_x"] = df_aux_1["position_x"].values[0]
+            df_aux_2["position_y"] = df_aux_1["position_y"].values[0]
+            df_aux_2["weighted_x"] = df_aux_1["weighted_x"].values[0]
+            df_aux_2["weighted_y"] = df_aux_1["weighted_y"].values[0]
+            df_aux_2["darkest_x"] = df_aux_1["darkest_x"].values[0]
+            df_aux_2["darkest_y"] = df_aux_1["darkest_y"].values[0]
+            df_aux_2["coords_x"] = [coords_1_x]
+            df_aux_2["coords_y"] = [coords_1_y]
+            img_2 = img_1
+
         # Now apply structural_similarity
         ssim_score, diff = metrics.structural_similarity(
             img_1,
@@ -156,8 +175,6 @@ def update_contours(
 
         # Update contours if there is no similarity
         if ssim_score < similarity_threshold:
-            distance_x = df_aux_2["position_x"].values[0] - df_aux_1["position_x"].values[0]  # noqa: 501
-            distance_y = df_aux_2["position_y"].values[0] - df_aux_1["position_y"].values[0]  # noqa: 501
             df_aux_2["coords_x"] = [distance_x + coords_1_x]
             df_aux_2["coords_y"] = [distance_y + coords_1_y]
 
@@ -248,10 +265,10 @@ def clustering_consecutive_frames(
         column_y = "{}_y".format(column)        # Column value Y-axis
 
         # Assign cluster according to the K-means algorithm
-        df_new_tracked[cluster_] = kmeans.fit_predict(df_new_tracked[[column_x, column_y]].values)  # noqa:501
+        df_new_tracked[cluster_] = kmeans.fit_predict(df_new_tracked[[column_x, column_y]].values)  # noqa: 501
 
         # Update ID and column values with cluster center
-        map_id = dict(enumerate(df_tracked_old_frame.iloc[0: n_particles]["id"]))  # noqa:501
+        map_id = dict(enumerate(df_tracked_old_frame.iloc[0: n_particles]["id"]))  # noqa: 501
         df_new_tracked[id_] = df_new_tracked[cluster_].map(map_id)
 
         # Update column value as a weighted average of previous and actual time
@@ -260,19 +277,19 @@ def clustering_consecutive_frames(
 
         if ids_now != n_particles:
             df_new_tracked[column_x] = (
-                weight_previous_time * df_new_tracked[cluster_].map(map_cluster_center_x)  # noqa:501
+                weight_previous_time * df_new_tracked[cluster_].map(map_cluster_center_x)  # noqa: 501
                 + (1 - weight_previous_time) * df_new_tracked[column_x]
             )
             df_new_tracked[column_y] = (
-                weight_previous_time * df_new_tracked[cluster_].map(map_cluster_center_y)  # noqa:501
+                weight_previous_time * df_new_tracked[cluster_].map(map_cluster_center_y)  # noqa: 501
                 + (1 - weight_previous_time) * df_new_tracked[column_y]
             )
 
         # Average over mixing IDs (First part - Average per column)
         #   For instance, if ids_old > n_particles, then two points are
         #   associated with the same id_ (pigeonhole principle)
-        df_new_tracked[column_x] = df_new_tracked.groupby(id_)[column_x].transform("mean")  # noqa:501
-        df_new_tracked[column_y] = df_new_tracked.groupby(id_)[column_y].transform("mean")  # noqa:501
+        df_new_tracked[column_x] = df_new_tracked.groupby(id_)[column_x].transform("mean")  # noqa: 501
+        df_new_tracked[column_y] = df_new_tracked.groupby(id_)[column_y].transform("mean")  # noqa: 501
 
     # Average over mixing IDs (Second part - Average over mixing particles)
     #   For instance (id_p, id_w, id_d) = (1, 1, 0) indicates a mixture of two
@@ -280,12 +297,12 @@ def clustering_consecutive_frames(
     #   detected particles (actual darkest pixel of particle_1 is related with
     #   particle_0 of previous time). Ideally id_p = id_w = id_d.
     df_new_tracked["id"] = df_new_tracked["id_p"]  # Priorize centroids
-    df_new_tracked["position_x"] = df_new_tracked.groupby("id")["position_x"].transform("mean")  # noqa:501
-    df_new_tracked["position_y"] = df_new_tracked.groupby("id")["position_y"].transform("mean")  # noqa:501
-    df_new_tracked["weighted_x"] = df_new_tracked.groupby("id")["weighted_x"].transform("mean")  # noqa:501
-    df_new_tracked["weighted_y"] = df_new_tracked.groupby("id")["weighted_y"].transform("mean")  # noqa:501
-    df_new_tracked["darkest_x"] = df_new_tracked.groupby("id")["darkest_x"].transform("mean")  # noqa:501
-    df_new_tracked["darkest_y"] = df_new_tracked.groupby("id")["darkest_y"].transform("mean")  # noqa:501
+    df_new_tracked["position_x"] = df_new_tracked.groupby("id")["position_x"].transform("mean")  # noqa: 501
+    df_new_tracked["position_y"] = df_new_tracked.groupby("id")["position_y"].transform("mean")  # noqa: 501
+    df_new_tracked["weighted_x"] = df_new_tracked.groupby("id")["weighted_x"].transform("mean")  # noqa: 501
+    df_new_tracked["weighted_y"] = df_new_tracked.groupby("id")["weighted_y"].transform("mean")  # noqa: 501
+    df_new_tracked["darkest_x"] = df_new_tracked.groupby("id")["darkest_x"].transform("mean")  # noqa: 501
+    df_new_tracked["darkest_y"] = df_new_tracked.groupby("id")["darkest_y"].transform("mean")  # noqa: 501
 
     # Get final tracked particles with the same number of n_particles
     temp_cols = ["id_p", "id_w", "id_d", "cluster_p", "cluster_w", "cluster_d"]
@@ -297,8 +314,13 @@ def clustering_consecutive_frames(
 
 # Clustering particles in all frames using K-means algorithm ----
 def clustering_all_frames(
+    reader,
     df_all_tracked: pd.DataFrame,
     weights_previous_time: np.array,
+    type: str = "equalized",
+    clip_limit: float = 0.2,
+    distance_threshold: float = 90,
+    similarity_threshold: float = 0.95,
     n_particles: int = 2
 ) -> pd.DataFrame:
     """Apply K-means clustering algorithm using the data of consecutive frames
@@ -335,12 +357,26 @@ def clustering_all_frames(
         plus number of holes subtracted by number of tunnels
     Args:
     ---------------------------------------------------------------------------
+    reader : imagaeio object
+        Imageio array with all the frames extracted from the video
     df_all_tracked : pandas DataFrame
         Dataframe with the information of tracked regions for all times
     weights_previous_time: float
         Weights given to each time. Normalized between 0 and 1 in each time.
     n_particles : int
         Number of minimal detected particles. Default value 2
+    type : str
+        Type of equalization used (global or local equalization). Default value
+        is "equalized"
+    clip_limit : float
+        Clipping limit, normalized between 0 and 1 (higher values give more
+        contrast). Defalut value is None
+    distance_threshold : float
+        Maximmum distance in X-axis or Y-axis allowed between identical IDs
+        Default value is 90
+    similarity_threshold : float
+        Structural similarity lower bound between identical IDs contours
+        allowed. Default value is 0.95
 
     Returns:
     ---------------------------------------------------------------------------
@@ -372,6 +408,22 @@ def clustering_all_frames(
             )
 
             # Update areas (add flag)
+            try:
+                df_contours = update_contours(
+                    reader=reader,
+                    df_tracked_1=df_local_clustered[df_local_clustered["time"] == times[k-1]],  # noqa: 501
+                    df_tracked_2=df_local_clustered[df_local_clustered["time"] == times[k]],  # noqa: 501
+                    type=type,
+                    clip_limit=clip_limit,
+                    distance_threshold=distance_threshold,
+                    similarity_threshold=similarity_threshold
+                )
+                df_local_clustered = pd.concat([
+                    df_local_clustered[df_local_clustered["time"] == times[k-1]],  # noqa: 501
+                    df_contours
+                ])
+            except Exception:
+                df_local_clustered["ssim"] = 1
 
             # Update original data with the clustered data
             df_clustered.drop(df_clustered[df_clustered["time"] == time].index, inplace=True)  # noqa: 501
