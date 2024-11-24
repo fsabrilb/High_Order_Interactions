@@ -174,14 +174,14 @@ def update_mixed_ids(
     return np.array(closest_matches, dtype=int)
 
 
-# Smooth the evolution reordering of mixed IDs ----
-def smooth_evolution(
+# Get allowed frames after reordering of mixed IDs ----
+def get_allowed_frame(
     df_tracked: pd.DataFrame,
     velocity_threshold: float = 100,
     omega_threshold: float = np.pi / 2,
     order: bool = False
 ) -> pd.DataFrame:
-    """Smooth evolution of tracked frames. The data has the following columns:
+    """Get allowed tracked frames. The data has the following columns:
         - id: Particle ID
         - time: Times (Frames)
         - position_x: Centroid position in X-axis
@@ -237,62 +237,88 @@ def smooth_evolution(
     Returns:
     ---------------------------------------------------------------------------
     df_final : pandas DataFrame
-        Updated df_tracked with smoothed evolution
+        Updated df_tracked with allowed frames in column allowed_frame
     """
     # Assumption: All the frames has the same ID count
     df_final = df_tracked.copy()
+    df_final["allowed_frame"] = True
     df_final["permuted_id"] = df_final["id"]
+    df_final["corrected_orientation"] = df_final["orientation"]
 
     unique_times = sorted(df_final["time"].unique())
-    for i in range(1, len(unique_times), 1):
-        if unique_times[i - 1] > -1:
-            # Filter current and previous data
-            current_time = unique_times[i]
-            previous_time = unique_times[i - 1]
-            dt = current_time - previous_time
+    i = 0
+    while (i < len(unique_times) - 1):
+        if unique_times[i] > -1:
+            j = i + 1
+            allowed_frame = False
+            while (j < len(unique_times)) and (allowed_frame is False):
+                # Filter current and previous data
+                current_time = unique_times[j]
+                previous_time = unique_times[i]
 
-            df_current = df_final[df_final["time"] == current_time]
-            df_previous = df_final[df_final["time"] == previous_time]
+                df_current = df_final[df_final["time"] == current_time]
+                df_previous = df_final[df_final["time"] == previous_time]
 
-            mask_x = df_current["mask_x"].values[0]  # False for long jumps
-            mask_y = df_current["mask_y"].values[0]  # False for long jumps
-            final_mask = (~mask_x) | (~mask_y)
-
-            if previous_time % 100 == 0:
-                print(
-                    "Previous Time:", previous_time,
-                    "Current Time:", current_time,
-                    "mask_x:", mask_x,
-                    "mask_y:", mask_y,
-                    "Final mask:", final_mask
+                # Update mixed IDs
+                closest_matches = update_mixed_ids(
+                    df_tracked_1=df_previous,
+                    df_tracked_2=df_current,
+                    order=order
                 )
 
-            # Update orientation (False for flips)
-            df_final["orientation"] = df_final["orientation"].mask(
-                cond=(df_final["mask_orientation"] == False),
-                other=-df_final["orientation"]
-            )
+                # Update local velocities
+                previous_velocities_x = df_previous["position_x"].values[closest_matches]  # noqa: 501
+                previous_velocities_y = df_previous["position_y"].values[closest_matches]  # noqa: 501
+                current_velocities_x = df_current["position_x"].values
+                current_velocities_y = df_current["position_y"].values
 
-            # Update mixed IDs
-            closest_matches = update_mixed_ids(
-                df_tracked_1=df_previous,
-                df_tracked_2=df_current,
-                order=order
-            )
+                velocities_x = (current_velocities_x - previous_velocities_x)  # noqa: 501
+                velocities_y = (current_velocities_y - previous_velocities_y)  # noqa: 501
+                mask_x = np.where(np.abs(velocities_x) <= velocity_threshold, True, False)  # noqa: 501
+                mask_y = np.where(np.abs(velocities_y) <= velocity_threshold, True, False)  # noqa: 501
 
-            previous_ids = df_previous["permuted_id"].values
-            new_ids = previous_ids[closest_matches]
-            df_final.loc[df_final["time"] == current_time, "permuted_id"] = new_ids
+                # Update dataframe
+                if (np.all(mask_x)) and (np.all(mask_y)):  # Correct swaping
+                    allowed_frame = True
+                    new_ids = df_previous["permuted_id"].values[closest_matches]
+                    df_final.loc[df_final["time"] == current_time, "permuted_id"] = new_ids  # noqa: 501
 
-            # Update velocities and associated masks
-            df_final["velocity_x"] = df_final.groupby(["permuted_id"])["position_x"].diff() / dt  # noqa: 501
-            df_final["velocity_y"] = df_final.groupby(["permuted_id"])["position_y"].diff() / dt # noqa: 501
-            df_final["velocity_orientation"] = df_final.groupby(["permuted_id"])["orientation"].diff() / dt  # noqa: 501
+                    # Update orientation (False for flips)
+                    previous_omega = df_previous["corrected_orientation"].values[closest_matches]  # noqa: 501
+                    current_omega = df_current["corrected_orientation"].values
+                    previous_sign = np.sign(previous_omega)
+                    current_sign = np.sign(current_omega)
+                    omega = np.where(
+                        previous_sign == current_sign,
+                        current_omega - previous_omega,
+                        current_omega + previous_omega
+                    )
+                    orientation = np.where(
+                        current_omega - previous_omega <= omega_threshold,
+                        current_omega,
+                        -current_omega  # noqa: 501
+                    )
+                    df_final.loc[df_final["time"] == current_time, "corrected_orientation"] = orientation  # noqa: 501
 
-            df_final["mask_x"] = np.where(np.abs(df_final["velocity_x"]) <= velocity_threshold, True, False)  # noqa: 501
-            df_final["mask_y"] = np.where(np.abs(df_final["velocity_y"]) <= velocity_threshold, True, False)  # noqa: 501
-            df_final["mask_orientation"] = np.where(np.abs(df_final["velocity_orientation"]) <= omega_threshold, True, False)  # noqa: 501
+                    # Update velocities and angular velocity (omega)
+                    df_final.loc[df_final["time"] == current_time, "velocity_x"] = velocities_x  # noqa: 501
+                    df_final.loc[df_final["time"] == current_time, "velocity_y"] = velocities_y  # noqa: 501
+                    df_final.loc[df_final["time"] == current_time, "velocity_orientation"] = omega  # noqa: 501
 
-    df_final = df_final.sort_values(["time", "id"])
+                else:  # Uncorrect swaping (error in tracking as lightly points)
+                    print("Previous Time:", previous_time, "Dropped Current Time:", current_time)  # noqa: 501
+                    df_final.loc[df_final["time"] == current_time, "allowed_frame"] = allowed_frame  # noqa: 501
+                    j += 1
+            i = j
+
+    df_final = df_final.sort_values(["time", "permuted_id"])
+    cols_dropped = [
+        "position_x", "weighted_x", "darkest_x", "lightest_x",
+        "position_y", "weighted_y", "darkest_y", "lightest_y",
+        "orientation", "corrected_orientation",
+        "velocity_x", "velocity_y", "velocity_orientation"
+    ]
+    for col_ in cols_dropped:
+        df_final.loc[df_final["allowed_frame"] == False, col_] = None
 
     return df_final

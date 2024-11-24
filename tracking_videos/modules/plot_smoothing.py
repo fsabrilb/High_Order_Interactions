@@ -154,7 +154,7 @@ def plot_tracking_evolution(
 
         titles = ["Position $X(t)$", "Position $Y(t)$", "Orientation $\\theta(t)$"]
         y_labels = ["Position X-axis $X(t)$", "Position Y-axis $Y(t)$", "Orientation $\theta(t)$"]
-    
+
         for j in [0, 1, 2]:
             ax[j].xaxis.set_major_locator(mtick.MaxNLocator(n_x_breaks))
             ax[j].xaxis.set_minor_locator(mtick.MaxNLocator(5 * n_x_breaks))
@@ -170,24 +170,22 @@ def plot_tracking_evolution(
             ax[j].set_facecolor("silver")
             ax[j].set_xlim(t_bounds[0], t_bounds[1])
             ax[j].set_ylim(p_bounds[j][0], p_bounds[j][1])
-    
+
     plt.show()
 
 
 # Plot frame with tracked particle ----
-def plot_tracking_frame_smoothed(
+def plot_all_process_frame(
     reader,
-    current_time: int,
-    previous_time: int,
+    times: np.ndarray,
     df_tracked: pd.DataFrame,
-    df_smooth: pd.DataFrame,
+    df_clustered: pd.DataFrame,
+    df_smoothed: pd.DataFrame,
     width: int = 10,
     n_x_breaks: int = 20,
     n_y_breaks: int = 20,
     x_bounds: list = [300, 1460],
     y_bounds: list = [240, 900],
-    x_zoom: list = [760, 880],
-    y_zoom: list = [320, 520],
     fancy_legend: bool = False,
     x_legend: float = 1,
     y_legend: float = 1
@@ -199,10 +197,8 @@ def plot_tracking_frame_smoothed(
     ---------------------------------------------------------------------------
     reader : imagaeio object
         Imageio array with all the frames extracted from the video
-    current_time : int
-        Index position of the frames detected in reader
-    previous_time : int
-        Index position of the frames detected in reader
+    times : int
+        Index positions of the frames detected in the reader
     df_tracked : pandas DataFrame
         Dataframe with the information of tracked regions with the following
         columns:
@@ -253,9 +249,12 @@ def plot_tracking_frame_smoothed(
             - mask_x: Flag for long-jump in x-axis
             - mask_y: Flag for long-jump in y-axis
             - mask_orientation: Flag for flip of the head-bump orientation
-    df_smooth : pandas DataFrame
-        Dataframe with the smoothed information of tracked regions with the
-        same columns
+    df_clustered : pandas DataFrame
+        Dataframe with the information of clustered regions with the same
+        columns
+    df_smoothed : pandas DataFrame
+        Dataframe with the information of smoothed regions with the same
+        columns
     width : int
         Width of final plot. Default value 10
     n_x_breaks : int
@@ -268,12 +267,6 @@ def plot_tracking_frame_smoothed(
     y_bounds : list
         Bound in Y-axis for the frame. Remember the axes are rotated with
         imageio. Default value is [240, 900]
-    x_zoom : list
-        Zoom in X-axis for the frame. Remember the axes are rotated with
-        imageio. Default value is [760, 880]
-    y_zoom : list
-        Zoom in Y-axis for the frame. Remember the axes are rotated with
-        imageio. Default value is [320, 520]
     fancy_legend : bool
         Fancy legend output (default value False)
     x_legend : float
@@ -283,156 +276,191 @@ def plot_tracking_frame_smoothed(
 
     Returns:
     ---------------------------------------------------------------------------
-    None
+    fig: object
+        Return of figure with size 3x3 where the columns correspond to frames
+        and rows to tracking, clustering and smoothing process
     """
 
-    frame = reader.get_data(current_time)
-    previous_frame = reader.get_data(previous_time)
-    title = "Tracked Particles"
-    if x_zoom is not None:
-        x_bounds = x_zoom
-        title = "{} - Zoom [{},{}]".format(title, x_zoom[0], x_zoom[1])
-        if y_zoom is not None:
-            y_bounds = y_zoom
-            title = "{}$\\times$[{},{}]".format(
-                title,
-                x_zoom[0],
-                x_zoom[1],
-                y_zoom[0],
-                y_zoom[1]
-            )
-
-    frame = frame[x_bounds[0]: x_bounds[1], y_bounds[0]: y_bounds[1]]
-    previous_frame = previous_frame[x_bounds[0]: x_bounds[1], y_bounds[0]: y_bounds[1]]
+    frame_0 = reader.get_data(times[0])
+    frame_1 = reader.get_data(times[1])
+    frame_2 = reader.get_data(times[2])
+    frame_0 = frame_0[x_bounds[0]: x_bounds[1], y_bounds[0]: y_bounds[1]]
+    frame_1 = frame_1[x_bounds[0]: x_bounds[1], y_bounds[0]: y_bounds[1]]
+    frame_2 = frame_2[x_bounds[0]: x_bounds[1], y_bounds[0]: y_bounds[1]]
+    titles = ["Tracked Particles", "Clustered Particles", "Smoothed Particles"]
 
     num_colors = df_tracked["id"].unique().shape[0]
     colors = np.linspace(0, 1, num_colors)
     cmap = plt.get_cmap("autumn", num_colors)
     cmap.set_under("black")
 
-    fig, ax = plt.subplots(2, 2)
-    fig.set_size_inches(w=2 * width, h=2 * (frame.shape[0] * width / frame.shape[1]))
-    ax[0][0].imshow(previous_frame, cmap="gray")
-    ax[1][0].imshow(previous_frame, cmap="gray")
-    ax[0][1].imshow(frame, cmap="gray")
-    ax[1][1].imshow(frame, cmap="gray")
+    fig, ax = plt.subplots(3, 3)
+    fig.set_size_inches(w=3* width, h=3* (frame_0.shape[0] * width / frame_0.shape[1]))
+
+    for i in [0, 1, 2]:  # Frame per column
+        ax[i][0].imshow(frame_0, cmap="gray")
+        ax[i][1].imshow(frame_1, cmap="gray")
+        ax[i][2].imshow(frame_2, cmap="gray")
 
     for id_ in df_tracked["id"].unique():
-        df_aux = df_tracked[df_tracked["id"] == id_]
-        for c_, time in enumerate(df_aux["time"].unique()):
-            df_aux_1 = df_tracked[(df_tracked["id"] == id_) & (df_tracked["time"] == time)]  # noqa: 501
-            df_aux_2 = df_smooth[(df_smooth["id"] == id_) & (df_smooth["time"] == time)]  # noqa: 501
-            
-            ax[c_][0].plot(
-                df_aux_1["position_x"].values,
-                df_aux_1["position_y"].values,
-                marker="o",
-                c=cmap(colors[id_]),
-                ms=4,
-                ls="",
-                label=r"$p_{{{}}}$".format(id_)
-            )  # Centroid
-            ax[c_][0].plot(
-                df_aux_1["weighted_x"].values,
-                df_aux_1["weighted_y"].values,
-                marker="v",
-                c=cmap(colors[id_]),
-                ms=4,
-                ls="",
-                label=r"$w_{{{}}}$".format(id_)
-            )  # Centroid weighted
-            ax[c_][0].plot(
-                df_aux_1["darkest_x"].values,
-                df_aux_1["darkest_y"].values,
-                marker="x",
-                c=cmap(colors[id_]),
-                ms=4,
-                ls="",
-                label=r"$d_{{{}}}$".format(id_)
-            )  # Darkest pixel
-            ax[c_][0].plot(
-                df_aux_1["lightest_x"].values,
-                df_aux_1["lightest_y"].values,
-                marker="^",
-                c=cmap(colors[id_]),
-                ms=4,
-                ls="",
-                label=r"$l_{{{}}}$".format(id_)
-            )  # Lightest pixel
+        for c_, time in enumerate(times):
+            try:
+                df_aux_1 = df_tracked[(df_tracked["id"] == id_) & (df_tracked["time"] == time)]  # noqa: 501
+                df_aux_2 = df_clustered[(df_clustered["id"] == id_) & (df_clustered["time"] == time)]  # noqa: 501
+                df_aux_3 = df_smoothed[(df_smoothed["id"] == id_) & (df_smoothed["time"] == time)]  # noqa: 501
+                length = 90
+    
+                # Positions (Trackes (T), Clustered (C), Smoothed (S))
+                px_t = df_aux_1["position_x"].values
+                wx_t = df_aux_1["weighted_x"].values
+                dx_t = df_aux_1["darkest_x"].values
+                lx_t = df_aux_1["lightest_x"].values
+                py_t = df_aux_1["position_y"].values
+                wy_t = df_aux_1["weighted_y"].values
+                dy_t = df_aux_1["darkest_y"].values
+                ly_t = df_aux_1["lightest_y"].values
+                angle_t = df_aux_1["orientation"].values
+                arx_t = px_t[0]
+                ary_t = py_t[0]
+                ax_t = length * np.sin(angle_t)[0]
+                ay_t = length * np.cos(angle_t)[0]
+                col_1 = cmap(colors[id_])
+    
+                px_c = df_aux_2["position_x"].values
+                wx_c = df_aux_2["weighted_x"].values
+                dx_c = df_aux_2["darkest_x"].values
+                lx_c = df_aux_2["lightest_x"].values
+                py_c = df_aux_2["position_y"].values
+                wy_c = df_aux_2["weighted_y"].values
+                dy_c = df_aux_2["darkest_y"].values
+                ly_c = df_aux_2["lightest_y"].values
+                angle_c = df_aux_2["orientation"].values
+                arx_c = px_c[0]
+                ary_c = py_c[0]
+                ax_c = length * np.sin(angle_c)[0]
+                ay_c = length * np.cos(angle_c)[0]
+                col_2 = cmap(colors[id_])
+    
+                px_s = df_aux_3["position_x"].values
+                wx_s = df_aux_3["weighted_x"].values
+                dx_s = df_aux_3["darkest_x"].values
+                lx_s = df_aux_3["lightest_x"].values
+                py_s = df_aux_3["position_y"].values
+                wy_s = df_aux_3["weighted_y"].values
+                dy_s = df_aux_3["darkest_y"].values
+                ly_s = df_aux_3["lightest_y"].values
+                angle_s = df_aux_3["orientation"].values
+                arx_s = px_s[0]
+                ary_s = py_s[0]
+                ax_s = length * np.sin(angle_s)[0]
+                ay_s = length * np.cos(angle_s)[0]
+                col_3 = cmap(colors[id_])
+    
+                print("time: {} id: {} T: {} C: {} S:{}".format(
+                    time, id_,
+                    np.round(angle_t[0] * 180 / np.pi, 4),
+                    np.round(angle_c[0] * 180 / np.pi, 4),
+                    np.round(angle_s[0] * 180 / np.pi, 4)
+                ))
+    
+                # ----------------------------------------------------- Tracked -----------------------------------------------------
+                ax[0][c_].plot(px_t, py_t, marker="o", c=col_1, ms=4, ls="", label=r"$p_{{{}}}$".format(id_))  # noqa: 501
+                ax[0][c_].plot(wx_t, wy_t, marker="v", c=col_1, ms=4, ls="", label=r"$w_{{{}}}$".format(id_))  # noqa: 501
+                ax[0][c_].plot(dx_t, dy_t, marker="x", c=col_1, ms=4, ls="", label=r"$d_{{{}}}$".format(id_))  # noqa: 501
+                ax[0][c_].plot(lx_t, ly_t, marker="^", c=col_1, ms=4, ls="", label=r"$l_{{{}}}$".format(id_))  # noqa: 501
+                ax[0][c_].arrow(
+                    x=arx_t,
+                    y=ary_t,
+                    dx=ax_t,
+                    dy=ay_t,
+                    fc=col_1,
+                    ec=col_1,
+                    head_width=20,
+                    head_length=20,
+                    ls="-",
+                    label=r"$p_{{{}}}$".format(id_)
+                )  # Orientation
+                ax[0][c_].plot(
+                    df_aux_1["coords_x"].values[0],
+                    df_aux_1["coords_y"].values[0],
+                    c=col_1,
+                    alpha=0.18,
+                    marker="",
+                    ls="--",
+                    label=r"$p_{{{}}}$".format(id_)
+                )  # Boundaries
 
-            ax[c_][1].plot(
-                df_aux_2["position_x"].values,
-                df_aux_2["position_y"].values,
-                marker="o",
-                c=cmap(colors[id_]),
-                ms=4,
-                ls="",
-                label=r"$p_{{{}}}^{{s}}$".format(id_)
-            )  # Centroid
-            ax[c_][1].plot(
-                df_aux_2["weighted_x"].values,
-                df_aux_2["weighted_y"].values,
-                marker="v",
-                c=cmap(colors[id_]),
-                ms=4,
-                ls="",
-                label=r"$w_{{{}}}^{{s}}$".format(id_)
-            )  # Centroid weighted
-            ax[c_][1].plot(
-                df_aux_2["darkest_x"].values,
-                df_aux_2["darkest_y"].values,
-                marker="x",
-                c=cmap(colors[id_]),
-                ms=4,
-                ls="",
-                label=r"$d_{{{}}}^{{s}}$".format(id_)
-            )  # Darkest pixel
-            ax[c_][1].plot(
-                df_aux_2["lightest_x"].values,
-                df_aux_2["lightest_y"].values,
-                marker="^",
-                c=cmap(colors[id_]),
-                ms=4,
-                ls="",
-                label=r"$l_{{{}}}^{{s}}$".format(id_)
-            )  # Lightest pixel
+                # ---------------------------------------------------- Clustered ----------------------------------------------------
+                ax[1][c_].plot(px_c, py_c, marker="o", c=col_2, ms=4, ls="", label=r"$p_{{{}}}$".format(id_))  # noqa: 501
+                ax[1][c_].plot(wx_c, wy_c, marker="v", c=col_2, ms=4, ls="", label=r"$w_{{{}}}$".format(id_))  # noqa: 501
+                ax[1][c_].plot(dx_c, dy_c, marker="x", c=col_2, ms=4, ls="", label=r"$d_{{{}}}$".format(id_))  # noqa: 501
+                ax[1][c_].plot(lx_c, ly_c, marker="^", c=col_2, ms=4, ls="", label=r"$l_{{{}}}$".format(id_))  # noqa: 501
+                ax[1][c_].arrow(
+                    arx_c,
+                    ary_c,
+                    ax_c,
+                    ay_c,
+                    fc=col_2,
+                    ec=col_2,
+                    head_width=20,
+                    head_length=20,
+                    ls="-",
+                    label=r"$p_{{{}}}$".format(id_)
+                )  # Orientation
+    
+                # ----------------------------------------------------- Smoothed -----------------------------------------------------
+                ax[2][c_].plot(px_s, py_s, marker="o", c=col_3, ms=4, ls="", label=r"$p_{{{}}}$".format(id_))  # noqa: 501
+                ax[2][c_].plot(wx_s, wy_s, marker="v", c=col_3, ms=4, ls="", label=r"$w_{{{}}}$".format(id_))  # noqa: 501
+                ax[2][c_].plot(dx_s, dy_s, marker="x", c=col_3, ms=4, ls="", label=r"$d_{{{}}}$".format(id_))  # noqa: 501
+                ax[2][c_].plot(lx_s, ly_s, marker="^", c=col_3, ms=4, ls="", label=r"$l_{{{}}}$".format(id_))  # noqa: 501
+                ax[2][c_].arrow(
+                    arx_s,
+                    ary_s,
+                    ax_s,
+                    ay_s,
+                    fc=col_3,
+                    ec=col_3,
+                    head_width=20,
+                    head_length=20,
+                    ls="-",
+                    label=r"$p_{{{}}}$".format(id_)
+                )  # Orientation
+            except Exception:
+                pass
 
-    times = [previous_time, current_time]
-    smoothed = ["", "smoothed"]
-    for i in [0, 1]:
-        for j in [0, 1]:
+    for i in [0, 1, 2]:
+        for j in [0, 1, 2]:
             ax[i][j].xaxis.set_major_locator(mtick.MaxNLocator(n_x_breaks))
             ax[i][j].xaxis.set_minor_locator(mtick.MaxNLocator(5 * n_x_breaks))
             ax[i][j].yaxis.set_major_locator(mtick.MaxNLocator(n_y_breaks))
             ax[i][j].yaxis.set_minor_locator(mtick.MaxNLocator(5 * n_y_breaks))
             ax[i][j].tick_params(axis="x", labelrotation=90)
             ax[i][j].set_title(
-                r"({}) {} {} - Time $t={}$".format(
+                r"({}) {} - Time $t={}$".format(
                     chr(65 + j + 2 * i),
-                    title,
-                    smoothed[i],
+                    titles[i],
                     times[j]
                 ),
                 loc="left",
                 y=1.005
             )
-            if y_zoom is not None:
-                ax[i][j].set_xlim([0, y_zoom[1] - y_zoom[0]])
-            else:
-                ax[i][j].set_xlim([0, y_bounds[1] - y_bounds[0]])
-            if x_zoom is not None:
-                ax[i][j].set_ylim([x_zoom[1] - x_zoom[0], 0])
-            else:
-                ax[i][j].set_ylim([x_bounds[1] - x_bounds[0], 0])
+            ax[i][j].set_xlim([0, y_bounds[1] - y_bounds[0]])
+            ax[i][j].set_ylim([x_bounds[1] - x_bounds[0], 0])
 
     # Combine legends into one and drop duplicates
     handles_0, labels_0 = ax[0][0].get_legend_handles_labels()
-    handles_1, labels_1 = ax[1][0].get_legend_handles_labels()
-    handles_2, labels_2 = ax[0][1].get_legend_handles_labels()
-    handles_3, labels_3 = ax[1][1].get_legend_handles_labels()
+    handles_1, labels_1 = ax[0][1].get_legend_handles_labels()
+    handles_2, labels_2 = ax[0][2].get_legend_handles_labels()
+    handles_3, labels_3 = ax[1][0].get_legend_handles_labels()
+    handles_4, labels_4 = ax[1][1].get_legend_handles_labels()
+    handles_5, labels_5 = ax[1][2].get_legend_handles_labels()
+    handles_6, labels_6 = ax[2][0].get_legend_handles_labels()
+    handles_7, labels_7 = ax[2][1].get_legend_handles_labels()
+    handles_8, labels_8 = ax[2][2].get_legend_handles_labels()
+
     unique = dict(zip(
-        labels_0 + labels_1 + labels_2 + labels_3,
-        handles_0 + handles_1 + handles_2 + handles_3
+        labels_0 + labels_1 + labels_2 + labels_3 + labels_4 + labels_5 + labels_6 + labels_7 + labels_8,  # noqa: 501
+        handles_0 + handles_1 + handles_2 + handles_3 + handles_4 + handles_5 + handles_6 + handles_7 + handles_8  # noqa: 501
     ))
 
     fig.legend(
@@ -441,10 +469,12 @@ def plot_tracking_frame_smoothed(
         loc="upper center",
         fancybox=fancy_legend,
         shadow=False,
-        ncol=2,
+        ncol=1,
         borderaxespad=0.01,
         bbox_to_anchor=(x_legend, y_legend),
         bbox_transform=fig.transFigure
     )
 
     plt.show()
+
+    return fig
