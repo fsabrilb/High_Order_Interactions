@@ -9,17 +9,16 @@ Created on Friday October 11th 2024
 import warnings
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
-import track_particles as tp
+import misc_functions as mf
 
-from skimage import draw, metrics  # type: ignore
-from skimage.color import rgb2gray  # type: ignore
-from sklearn.cluster import KMeans  # type: ignore
+from functools import partial
 from scipy.spatial.distance import cdist  # type: ignore
 
 # Global options ----
 warnings.filterwarnings("ignore")
 pd.options.mode.chained_assignment = None
 pd.set_option('display.max_columns', None)
+
 
 # Permutation of matrix indexes (auxiliar funciton) ----
 def make_permutation(arr: np.ndarray):
@@ -39,6 +38,7 @@ def make_permutation(arr: np.ndarray):
             used.add(result[i])  # Mark the first occurrence as used
 
     return list(result)
+
 
 # Permutation of matrix indexes (auxiliar function) ----
 def find_unique_minimum_indices(matrix: np.ndarray, order: bool = False):
@@ -177,9 +177,11 @@ def update_mixed_ids(
 # Get allowed frames after reordering of mixed IDs ----
 def get_allowed_frame(
     df_tracked: pd.DataFrame,
-    velocity_threshold: float = 100,
-    omega_threshold: float = np.pi / 2,
-    order: bool = False
+    order: bool = False,
+    log_path="../logs",
+    log_filename="log_smooth",
+    verbose=1,
+    arg_list: list = [0, 100, 100, np.pi / 2, True]
 ) -> pd.DataFrame:
     """Get allowed tracked frames. The data has the following columns:
         - id: Particle ID
@@ -226,26 +228,53 @@ def get_allowed_frame(
     ---------------------------------------------------------------------------
     df_tracked : pandas DataFrame
         Dataframe with the information of tracked regions
+    order : bool
+        Order selection for traverse the array
+    log_path : string
+        Local path for logs (default value is "../logs")
+    log_filename : string
+        Local filename for logs (default value is "log_smooth")
+    verbose : int
+        Provides additional details as to what the computer is doing when
+        get_allowed_frame is running
+    t0 : float
+        Initial time for filtering the information
+    tf : float
+        Final time for filtering the information
     velocity_threshold : float
         Maximmum velocity in X-axis or Y-axis allowed between identical IDs
         Default value is 100
     omega_threshold : float
         Maximmum angular velocity between identical IDs. Default value is pi/2
-    order : bool
-        Order selection for traverse the array
+    smooth : bool
+        Flag for smoothing over all frames or only initial and last frame
 
     Returns:
     ---------------------------------------------------------------------------
     df_final : pandas DataFrame
-        Updated df_tracked with allowed frames in column allowed_frame
+        Updated df_tracked with allowed frames in column allowed_frame,
+        correct swapped IDs in column permuted_id and initial corrected
+        orientation
     """
+    # Extract the parameters from arg_list
+    t0 = arg_list[0]
+    tf = arg_list[1]
+    velocity_threshold = arg_list[2]
+    omega_threshold = arg_list[3]
+    smooth = arg_list[4]
+    log_filename = log_filename + "_" + str(t0).zfill(5) + "_" + str(tf).zfill(5)  # noqa: 501
+
     # Assumption: All the frames has the same ID count
-    df_final = df_tracked.copy()
+    df_final = df_tracked[((df_tracked["time"] >= t0) & (df_tracked["time"] <= tf))].copy()  # noqa: 501
     df_final["allowed_frame"] = True
     df_final["permuted_id"] = df_final["id"]
     df_final["corrected_orientation"] = df_final["orientation"]
 
-    unique_times = sorted(df_final["time"].unique())
+    if smooth:
+        unique_times = sorted(df_final["time"].unique())
+    else:
+        unique_times = [t0, tf]
+        df_final.loc[~df_final["time"].isin(unique_times), "allowed_frame"] = False  # noqa: 501
     i = 0
     while (i < len(unique_times) - 1):
         if unique_times[i] > -1:
@@ -277,6 +306,10 @@ def get_allowed_frame(
                 mask_x = np.where(np.abs(velocities_x) <= velocity_threshold, True, False)  # noqa: 501
                 mask_y = np.where(np.abs(velocities_y) <= velocity_threshold, True, False)  # noqa: 501
 
+                if smooth is False:
+                    mask_x = np.array([True])
+                    mask_y = np.array([True])
+
                 # Update dataframe
                 if (np.all(mask_x)) and (np.all(mask_y)):  # Correct swaping
                     allowed_frame = True
@@ -305,12 +338,35 @@ def get_allowed_frame(
                     df_final.loc[df_final["time"] == current_time, "velocity_y"] = velocities_y  # noqa: 501
                     df_final.loc[df_final["time"] == current_time, "velocity_orientation"] = omega  # noqa: 501
 
+                    # Function development
+                    if verbose >= 1:
+                        with open("{}/{}.txt".format(log_path, log_filename), "a") as file:  # noqa: 501
+                            file.write(
+                                "Smooth interval [{},{}], Previous time: {}, Current time: {}\n".format(  # noqa: 501
+                                    t0,
+                                    tf,
+                                    previous_time,
+                                    current_time
+                                )
+                            )
+
                 else:  # Uncorrect swaping (error in tracking as lightly points)
-                    print("Previous Time:", previous_time, "Dropped Current Time:", current_time)  # noqa: 501
+                    # Function development
+                    if verbose >= 1:
+                        with open("{}/{}.txt".format(log_path, log_filename), "a") as file:  # noqa: 501
+                            file.write(
+                                "Nonsmooth interval [{},{}], Previous time: {}, Dropped time: {}\n".format(  # noqa: 501
+                                    t0,
+                                    tf,
+                                    previous_time,
+                                    current_time
+                                )
+                            )
                     df_final.loc[df_final["time"] == current_time, "allowed_frame"] = allowed_frame  # noqa: 501
                     j += 1
             i = j
 
+    # Final processing (drop missed values)
     df_final = df_final.sort_values(["time", "permuted_id"])
     cols_dropped = [
         "position_x", "weighted_x", "darkest_x", "lightest_x",
@@ -320,5 +376,184 @@ def get_allowed_frame(
     ]
     for col_ in cols_dropped:
         df_final.loc[df_final["allowed_frame"] == False, col_] = None
+    df_final["smooth_chunk"] = "chunk_{}_{}".format(str(t0).zfill(5), str(tf).zfill(5))  # noqa: 501
+
+    if smooth is False:
+        # Linear interpolation over dropped frames
+        for id_ in range(len(df_final["permuted_id"].unique())):
+            mask = df_final.loc[:,"permuted_id"]==df_final["permuted_id"].unique()[id_]  # noqa: 501
+            df_final[mask]=df_final[mask].interpolate(method="linear")
+
+    # Relocate new columns
+    df_final.insert(0, "allowed_frame", df_final.pop("allowed_frame"))
+    df_final.insert(1, "time", df_final.pop("time"))
+    df_final.insert(2, "smooth_chunk", df_final.pop("smooth_chunk"))
+    df_final.insert(4, "permuted_id", df_final.pop("permuted_id"))
+    df_final.insert(16, "corrected_orientation", df_final.pop("corrected_orientation"))  # noqa: 501
+
+    return df_final
+
+
+# Deployment of all smoothing process (swapping IDs, orientation, allowed frames) ----  # noqa: 501
+def smooth_frames(
+    df_tracked: pd.DataFrame,
+    arg_list: list = [[0, 100, 100, np.pi / 2, True]],
+    order: bool = False,
+    log_path="../logs",
+    log_filename="log_smooth",
+    verbose=1,
+    tqdm_bar=True
+):
+    """Get allowed tracked frames. The data has the following columns:
+        - id: Particle ID
+        - time: Times (Frames)
+        - position_x: Centroid position in X-axis
+        - position_y: Centroid position in Y-axis
+        - weighted_x: Centroid position in X-axis weighted with intensity image
+        - weighted_y: Centroid position in Y-axis weighted with intensity image
+        - darkest_v: Intensity of darkest pixel in the local region (particle)
+        - darkest_x: Position of darkest pixel in the local region (particle)
+        - darkest_y: Position of darkest pixel in the local region (particle)
+        - lightest_v: Intensity of lightest pixel in the local region(particle)
+        - lightest_x: Position of lightest pixel in the local region (particle)
+        - lightest_y: Position of lightest pixel in the local region (particle)
+        - coords_x: X values of the region's boundary
+        - coords_y: Y values of the region's boundary
+        - orientation: Orientation respect rows
+        - area: Region area i.e. number of pixels of the region scaled by
+        pixel-area
+        - area_convex: Area of the convex hull image, which is the smallest
+        convex polygon that encloses the region
+        - area_filled: Area of the region with all the holes filled in
+        - axis_major: The length of the major axis of the ellipse that has the
+        same normalized second central moments as the region
+        - axis_minor: The length of the minor axis of the ellipse that has the
+        same normalized second central moments as the region
+        - eccentricity: Eccentricity of the ellipse that has the same
+        second-moments as the region. The eccentricity is the ratio of the
+        focal distance (distance between focal points) over the major axis
+        length. The value is in the interval [0, 1). When it is 0, the ellipse
+        becomes a circle
+        - euler_number: Euler characteristic of the set of non-zero pixels.
+        Computed as number of connected components subtracted by number of
+        holes (input.ndim connectivity). In 3D, number of connected components
+        plus number of holes subtracted by number of tunnels
+        - velocity_x: Velocity in X-axis
+        - velocity_y: Velocity in Y-axis
+        - velocity_orientation: Angular velocity
+        - mask_x: Flag for long-jump in x-axis
+        - mask_y: Flag for long-jump in y-axis
+        - mask_orientation: Flag for flip of the head-bump orientation
+
+    Args:
+    ---------------------------------------------------------------------------
+    df_tracked : pandas DataFrame
+        Dataframe with the information of tracked regions
+    arg_list : int
+        Time interval bounds per chunk, velocity threshold per chunk, omega
+        threshold per chunk and smooth flag per chunk
+    order : bool
+        Order selection for traverse the array
+    log_path : string
+        Local path for logs (default value is "../logs")
+    log_filename : string
+        Local filename for logs (default value is "log_smooth")
+    verbose : int
+        Provides additional details as to what the computer is doing when
+        get_allowed_frame is running
+
+    Returns:
+    ---------------------------------------------------------------------------
+    df_final : pandas DataFrame
+        Updated df_tracked with allowed frames in column allowed_frame,
+        correct swapped IDs in column permuted_id and initial corrected
+        orientation
+    """
+
+    # Auxiliary function for simulations of Brownian paths
+    fun_local = partial(
+        get_allowed_frame,
+        df_tracked,
+        order,
+        log_path,
+        log_filename,
+        verbose
+    )
+
+    # Parallel loop for chunks of smoothing process
+    df_final = mf.parallel_run(
+        fun=fun_local,
+        arg_list=arg_list,
+        tqdm_bar=tqdm_bar
+    )
+    df_final = pd.concat(df_final)
+    df_final = df_final.sort_values(["time", "smooth_chunk", "permuted_id"])
+
+    # Swapping for merging chunks
+    mask = (df_final["allowed_frame"] == True)  # noqa: 501
+    unique_times = df_final.groupby("smooth_chunk")["time"].max().values
+    allowed_times = df_final[mask].groupby("smooth_chunk")["time"].max().values
+    dt = unique_times - allowed_times + 1  # Time difference between consecutive chunks
+
+    def apply_permutation(group, permutation):
+        group["permuted_id"] = group["permuted_id"].apply(lambda x: permutation[x])  # noqa: 501
+        return group
+
+    for i in range(len(unique_times)):
+        df_aux = df_final[df_final["time"] == unique_times[i]]
+        chunks = df_aux["smooth_chunk"].unique()
+
+        tau = unique_times[i]
+        if df_aux["allowed_frame"].values[0] is False:
+            tau = allowed_times[i]
+        df_aux = df_final[df_final["time"] == tau]
+
+        if len(chunks) > 1:
+            df_1 = df_aux[df_aux["smooth_chunk"] == chunks[0]].copy()
+            df_2 = df_final[df_final["time"] == tau + dt[i]].copy()
+
+            df_1["id"] = df_1["permuted_id"]
+            df_2["id"] = df_2["permuted_id"]
+
+            # Update mixed IDs
+            closest_matches = update_mixed_ids(
+                df_tracked_1=df_1,
+                df_tracked_2=df_2,
+                order=order
+            )
+
+            new_ids = df_1["permuted_id"].values[closest_matches]
+            # new_ids = df_previous["permuted_id"].values[closest_matches]
+            # df_final.loc[df_final["time"] == current_time, "permuted_id"] = new_ids  # noqa: 501
+            print(
+                "Time:", unique_times[i],
+                "Chunks", len(chunks),
+                "Allowed time", allowed_times[i],
+                "Permutation", new_ids
+            )
+
+            tau = unique_times[i]
+            mask = ((df_final["time"] == tau) & (df_final["smooth_chunk"].isin(chunks[1:])))  # noqa: 501
+            df_final = df_final[~mask]
+            if i == len(unique_times) - 1:
+                delta = df_final["time"].max()
+            else:
+                delta = unique_times[i + 1]
+            df_final.loc[((df_final["time"] > tau) & (df_final["time"] <= delta)), "permuted_id"] = (  # noqa: 501
+                df_final[((df_final["time"] > tau) & (df_final["time"] <= delta))]  # noqa: 501
+                .groupby("time")
+                .apply(lambda g: apply_permutation(g, new_ids))["permuted_id"]
+                .values
+            )
+        df_final = df_final.sort_values(["time", "smooth_chunk", "permuted_id"])
+
+    # Linear interpolation over dropped frames
+    # for id_ in range(len(df_final["permuted_id"].unique())):
+    #     mask = df_final.loc[:,"permuted_id"]==df_final["permuted_id"].unique()[id_]  # noqa: 501
+    #     # df_final[mask]=df_final[mask].interpolate(method="linear")
+    #     df_final[mask]=(
+    #         df_final[mask].interpolate(method="nearest", order=3, limit=None, limit_direction=None)
+    #         .fillna(df_final[mask].interpolate(method="spline", order=3, limit=None, limit_direction='both'))
+    #      )
 
     return df_final

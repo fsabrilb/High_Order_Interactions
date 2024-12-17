@@ -309,7 +309,7 @@ def plot_all_process_frame(
                 df_aux_2 = df_clustered[(df_clustered["id"] == id_) & (df_clustered["time"] == time)]  # noqa: 501
                 df_aux_3 = df_smoothed[(df_smoothed["id"] == id_) & (df_smoothed["time"] == time)]  # noqa: 501
                 length = 90
-    
+
                 # Positions (Trackes (T), Clustered (C), Smoothed (S))
                 px_t = df_aux_1["position_x"].values
                 wx_t = df_aux_1["weighted_x"].values
@@ -325,7 +325,7 @@ def plot_all_process_frame(
                 ax_t = length * np.sin(angle_t)[0]
                 ay_t = length * np.cos(angle_t)[0]
                 col_1 = cmap(colors[id_])
-    
+
                 px_c = df_aux_2["position_x"].values
                 wx_c = df_aux_2["weighted_x"].values
                 dx_c = df_aux_2["darkest_x"].values
@@ -340,7 +340,7 @@ def plot_all_process_frame(
                 ax_c = length * np.sin(angle_c)[0]
                 ay_c = length * np.cos(angle_c)[0]
                 col_2 = cmap(colors[id_])
-    
+
                 px_s = df_aux_3["position_x"].values
                 wx_s = df_aux_3["weighted_x"].values
                 dx_s = df_aux_3["darkest_x"].values
@@ -355,15 +355,15 @@ def plot_all_process_frame(
                 ax_s = length * np.sin(angle_s)[0]
                 ay_s = length * np.cos(angle_s)[0]
                 col_3 = cmap(colors[id_])
-    
+
                 print("time: {} id: {} T: {} C: {} S:{}".format(
                     time, id_,
                     np.round(angle_t[0] * 180 / np.pi, 4),
                     np.round(angle_c[0] * 180 / np.pi, 4),
                     np.round(angle_s[0] * 180 / np.pi, 4)
                 ))
-    
-                # ----------------------------------------------------- Tracked -----------------------------------------------------
+
+                # ----------------------------------------------------- Tracked -----------------------------------------------------  # noqa: 501
                 ax[0][c_].plot(px_t, py_t, marker="o", c=col_1, ms=4, ls="", label=r"$p_{{{}}}$".format(id_))  # noqa: 501
                 ax[0][c_].plot(wx_t, wy_t, marker="v", c=col_1, ms=4, ls="", label=r"$w_{{{}}}$".format(id_))  # noqa: 501
                 ax[0][c_].plot(dx_t, dy_t, marker="x", c=col_1, ms=4, ls="", label=r"$d_{{{}}}$".format(id_))  # noqa: 501
@@ -390,7 +390,7 @@ def plot_all_process_frame(
                     label=r"$p_{{{}}}$".format(id_)
                 )  # Boundaries
 
-                # ---------------------------------------------------- Clustered ----------------------------------------------------
+                # ---------------------------------------------------- Clustered ----------------------------------------------------  # noqa: 501
                 ax[1][c_].plot(px_c, py_c, marker="o", c=col_2, ms=4, ls="", label=r"$p_{{{}}}$".format(id_))  # noqa: 501
                 ax[1][c_].plot(wx_c, wy_c, marker="v", c=col_2, ms=4, ls="", label=r"$w_{{{}}}$".format(id_))  # noqa: 501
                 ax[1][c_].plot(dx_c, dy_c, marker="x", c=col_2, ms=4, ls="", label=r"$d_{{{}}}$".format(id_))  # noqa: 501
@@ -407,8 +407,8 @@ def plot_all_process_frame(
                     ls="-",
                     label=r"$p_{{{}}}$".format(id_)
                 )  # Orientation
-    
-                # ----------------------------------------------------- Smoothed -----------------------------------------------------
+
+                # ----------------------------------------------------- Smoothed -----------------------------------------------------  # noqa: 501
                 ax[2][c_].plot(px_s, py_s, marker="o", c=col_3, ms=4, ls="", label=r"$p_{{{}}}$".format(id_))  # noqa: 501
                 ax[2][c_].plot(wx_s, wy_s, marker="v", c=col_3, ms=4, ls="", label=r"$w_{{{}}}$".format(id_))  # noqa: 501
                 ax[2][c_].plot(dx_s, dy_s, marker="x", c=col_3, ms=4, ls="", label=r"$d_{{{}}}$".format(id_))  # noqa: 501
