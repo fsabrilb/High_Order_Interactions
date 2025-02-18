@@ -9,14 +9,8 @@ Created on Friday October 4th 2024
 import warnings
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
-import track_particles as tp  # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
 import matplotlib.ticker as mtick  # type: ignore
-import clustering_particles as cp  # type: ignore
-import matplotlib.animation as animation  # type: ignore
-
-from skimage.color import rgb2gray  # type: ignore
-
 
 # Global options ----
 warnings.filterwarnings("ignore")
@@ -124,7 +118,7 @@ def plot_tracking_evolution(
         ax[0].plot(
             df_aux["time"],
             df_aux["position_x"],
-            marker=markers[c_%4],
+            marker=markers[c_ % 4],
             c=cmap(colors[c_]),
             ms=2,
             ls="-",
@@ -134,7 +128,7 @@ def plot_tracking_evolution(
         ax[1].plot(
             df_aux["time"],
             df_aux["position_y"],
-            marker=markers[c_%4],
+            marker=markers[c_ % 4],
             c=cmap(colors[c_]),
             ms=2,
             ls="-",
@@ -144,7 +138,7 @@ def plot_tracking_evolution(
         ax[2].plot(
             df_aux["time"],
             df_aux["orientation"],
-            marker=markers[c_%4],
+            marker=markers[c_ % 4],
             c=cmap(colors[c_]),
             ms=2,
             ls="-",
@@ -152,8 +146,8 @@ def plot_tracking_evolution(
             label=r"$\theta_{{{}}}$".format(id_)
         )
 
-        titles = ["Position $X(t)$", "Position $Y(t)$", "Orientation $\\theta(t)$"]
-        y_labels = ["Position X-axis $X(t)$", "Position Y-axis $Y(t)$", "Orientation $\theta(t)$"]
+        titles = ["Position $X(t)$", "Position $Y(t)$", "Orientation $\\theta(t)$"]  # noqa: 501
+        y_labels = ["Position X-axis $X(t)$", "Position Y-axis $Y(t)$", "Orientation $\theta(t)$"]  # noqa: 501
 
         for j in [0, 1, 2]:
             ax[j].xaxis.set_major_locator(mtick.MaxNLocator(n_x_breaks))
@@ -161,12 +155,12 @@ def plot_tracking_evolution(
             ax[j].yaxis.set_major_locator(mtick.MaxNLocator(n_y_breaks))
             ax[j].yaxis.set_minor_locator(mtick.MaxNLocator(5 * n_y_breaks))
             ax[j].tick_params(axis="x", labelrotation=90)
-            ax[j].set_xlabel("Time $t$")  
-            ax[j].set_ylabel(y_labels[j])  
+            ax[j].set_xlabel("Time $t$")
+            ax[j].set_ylabel(y_labels[j])
             ax[j].legend(fancybox=fancy_legend, shadow=True, ncol=1)
-            ax[j].set_title(r"({}) {}".format(chr(65 + j), titles[j]), loc="left", y=1.005)
-            ax[j].tick_params(which = "major", direction = "in", top = True, right = True, length = 12)
-            ax[j].tick_params(which = "minor", direction = "in", top = True, right = True, length = 6)
+            ax[j].set_title(r"({}) {}".format(chr(65 + j), titles[j]), loc="left", y=1.005)  # noqa: 501
+            ax[j].tick_params(which="major", direction="in", top=True, right=True, length=12)  # noqa: 501
+            ax[j].tick_params(which="minor", direction="in", top=True, right=True, length=6)  # noqa: 501
             ax[j].set_facecolor("silver")
             ax[j].set_xlim(t_bounds[0], t_bounds[1])
             ax[j].set_ylim(p_bounds[j][0], p_bounds[j][1])
@@ -295,7 +289,7 @@ def plot_all_process_frame(
     cmap.set_under("black")
 
     fig, ax = plt.subplots(3, 3)
-    fig.set_size_inches(w=3* width, h=3* (frame_0.shape[0] * width / frame_0.shape[1]))
+    fig.set_size_inches(w=3* width, h=3* (frame_0.shape[0] * width / frame_0.shape[1]))  # noqa: 501
 
     for i in [0, 1, 2]:  # Frame per column
         ax[i][0].imshow(frame_0, cmap="gray")

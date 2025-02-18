@@ -14,7 +14,6 @@ import track_particles as tp
 from skimage import draw, metrics  # type: ignore
 from skimage.color import rgb2gray  # type: ignore
 from sklearn.cluster import KMeans  # type: ignore
-from scipy.spatial.distance import cdist  # type: ignore
 
 # Global options ----
 warnings.filterwarnings("ignore")
@@ -450,7 +449,7 @@ def clustering_local_frames(
             try:
                 df_local_clustered = clustering_consecutive_frames(
                     df_tracked_old_frame=df_local[df_local["time"] == times[index-1]],  # noqa: 501
-                    df_tracked_frame=df_local[df_local["time"] == times[index]],
+                    df_tracked_frame=df_local[df_local["time"] == times[index]],  # noqa: 501
                     weight_previous_time=weights_previous_time[k],
                     distance_threshold=distance_threshold,
                     n_particles=n_particles

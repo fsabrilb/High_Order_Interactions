@@ -193,8 +193,6 @@ def plot_profiled_frame(
             y_bounds = y_zoom
             title = "{}$\\times$[{},{}]".format(
                 title,
-                x_zoom[0],
-                x_zoom[1],
                 y_zoom[0],
                 y_zoom[1]
             )
@@ -364,8 +362,6 @@ def plot_boundary_edge_frame(
             y_bounds = y_zoom
             title = "{}$\\times$[{},{}]".format(
                 title,
-                x_zoom[0],
-                x_zoom[1],
                 y_zoom[0],
                 y_zoom[1]
             )
@@ -655,8 +651,6 @@ def plot_tracking_frame(
             y_bounds = y_zoom
             title = "{}$\\times$[{},{}]".format(
                 title,
-                x_zoom[0],
-                x_zoom[1],
                 y_zoom[0],
                 y_zoom[1]
             )
@@ -882,8 +876,6 @@ def plot_tracking_animation(
             y_bounds = y_zoom
             title = "{}$\\times$[{},{}]".format(
                 title,
-                x_zoom[0],
-                x_zoom[1],
                 y_zoom[0],
                 y_zoom[1]
             )

@@ -337,7 +337,7 @@ class Higher_Order_Interactions:
 
         # Update timers and velocities with new moving type value
         for i in range(self.num_particles):
-            if particles.moving_types[i] == True:  # Switch from rest to move
+            if particles.moving_types[i] == True:  # Switch from rest to move  # noqa: 501
                 if particles.timers[i] <= 0:
                     particles.timers[i] += particles.stopping_times[i]
             else:  # Switch from move to rest
@@ -419,6 +419,7 @@ class Higher_Order_Interactions:
         particles.positions += self.mu_x * dt + self.eta_x
         particles.velocities += self.mu_v * dt + self.eta_v
 
+        # Ensure particles wrap around the screen (toroidal space)
         if periodic is True:
             particles.positions = particles.positions % np.array(box_sizes)
 

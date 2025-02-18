@@ -65,7 +65,7 @@ def find_unique_minimum_indices(matrix: np.ndarray, order: bool = False):
         # Flatten matrix to find global ordering of minimum values
         flat_indices = np.argsort(matrix, axis=None)
 
-        # Iterate over sorted flattened indices to assign rows based on minimums
+        # Iterate over sorted flattened indices to assign rows based on minimums  # noqa: 501
         for flat_index in flat_indices:
             # Convert the flattened index back to 2D indices
             row, col = divmod(flat_index, n)
@@ -313,7 +313,7 @@ def get_allowed_frame(
                 # Update dataframe
                 if (np.all(mask_x)) and (np.all(mask_y)):  # Correct swaping
                     allowed_frame = True
-                    new_ids = df_previous["permuted_id"].values[closest_matches]
+                    new_ids = df_previous["permuted_id"].values[closest_matches]  # noqa: 501
                     df_final.loc[df_final["time"] == current_time, "permuted_id"] = new_ids  # noqa: 501
 
                     # Update orientation (False for flips)
@@ -350,7 +350,7 @@ def get_allowed_frame(
                                 )
                             )
 
-                else:  # Uncorrect swaping (error in tracking as lightly points)
+                else:  # Uncorrect swaping (error in tracking as lightly points)  # noqa: 501
                     # Function development
                     if verbose >= 1:
                         with open("{}/{}.txt".format(log_path, log_filename), "a") as file:  # noqa: 501
@@ -375,14 +375,14 @@ def get_allowed_frame(
         "velocity_x", "velocity_y", "velocity_orientation"
     ]
     for col_ in cols_dropped:
-        df_final.loc[df_final["allowed_frame"] == False, col_] = None
+        df_final.loc[df_final["allowed_frame"] == False, col_] = None  # noqa: 501
     df_final["smooth_chunk"] = "chunk_{}_{}".format(str(t0).zfill(5), str(tf).zfill(5))  # noqa: 501
 
     if smooth is False:
         # Linear interpolation over dropped frames
         for id_ in range(len(df_final["permuted_id"].unique())):
             mask = df_final.loc[:,"permuted_id"]==df_final["permuted_id"].unique()[id_]  # noqa: 501
-            df_final[mask]=df_final[mask].interpolate(method="linear")
+            df_final[mask] = df_final[mask].interpolate(method="linear")
 
     # Relocate new columns
     df_final.insert(0, "allowed_frame", df_final.pop("allowed_frame"))
@@ -493,7 +493,7 @@ def smooth_frames(
     mask = (df_final["allowed_frame"] == True)  # noqa: 501
     unique_times = df_final.groupby("smooth_chunk")["time"].max().values
     allowed_times = df_final[mask].groupby("smooth_chunk")["time"].max().values
-    dt = unique_times - allowed_times + 1  # Time difference between consecutive chunks
+    dt = unique_times - allowed_times + 1  # Time difference between consecutive chunks  # noqa: 501
 
     def apply_permutation(group, permutation):
         group["permuted_id"] = group["permuted_id"].apply(lambda x: permutation[x])  # noqa: 501
@@ -545,15 +545,15 @@ def smooth_frames(
                 .apply(lambda g: apply_permutation(g, new_ids))["permuted_id"]
                 .values
             )
-        df_final = df_final.sort_values(["time", "smooth_chunk", "permuted_id"])
+        df_final = df_final.sort_values(["time", "smooth_chunk", "permuted_id"])  # noqa: 501
 
     # Linear interpolation over dropped frames
     # for id_ in range(len(df_final["permuted_id"].unique())):
     #     mask = df_final.loc[:,"permuted_id"]==df_final["permuted_id"].unique()[id_]  # noqa: 501
     #     # df_final[mask]=df_final[mask].interpolate(method="linear")
     #     df_final[mask]=(
-    #         df_final[mask].interpolate(method="nearest", order=3, limit=None, limit_direction=None)
-    #         .fillna(df_final[mask].interpolate(method="spline", order=3, limit=None, limit_direction='both'))
+    #         df_final[mask].interpolate(method="nearest", order=3, limit=None, limit_direction=None)  # noqa: 501
+    #         .fillna(df_final[mask].interpolate(method="spline", order=3, limit=None, limit_direction='both'))  # noqa: 501
     #      )
 
     return df_final
