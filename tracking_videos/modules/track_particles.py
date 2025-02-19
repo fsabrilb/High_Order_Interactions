@@ -112,6 +112,7 @@ def get_boundary_frames(
 def process_frame(
     reinforce_boundaries: bool,
     remove_holes: bool,
+    remove_boundaries: bool,
     type: str,
     clip_limit: float,
     threshold: float,
@@ -140,6 +141,9 @@ def process_frame(
     remove_holes : bool
         Remove holes and small objects for increasing performance in tracking
         algorithm
+    remove_boundaries : bool
+        Remove boundaries in the dataframe output for fast performance of
+        tracking algorithm
     type : str
         Type of equalization used (global or local equalization). Default value
         is "equalized"
@@ -318,30 +322,51 @@ def process_frame(
             max_intensity_coord = region.centroid
 
         # Final dataframe
-        tracking_results.append({
-            "id": region.label,                         # Particle ID
-            "time": time,                               # Time (Frame)
-            "position_x": region.centroid[1],           # Centroid[1] is x
-            "position_y": region.centroid[0],           # Centroid[0] is y
-            "weighted_x": region.centroid_weighted[1],  # Weighted X
-            "weighted_y": region.centroid_weighted[0],  # Weighted Y
-            "darkest_v": min_intensity,                 # Darkest value
-            "darkest_x": min_intensity_coord[1],        # Darkest X
-            "darkest_y": min_intensity_coord[0],        # Darkest Y
-            "lightest_v": max_intensity,                # Lightest value
-            "lightest_x": max_intensity_coord[1],       # Lightest X
-            "lightest_y": max_intensity_coord[0],       # Lightest Y
-            "coords_x": region.coords[:, 1],            # Boundary in X
-            "coords_y": region.coords[:, 0],            # Boundary in Y
-            "orientation": region.orientation,          # Orientation
-            "area": region.area,                        # Region area
-            "area_convex": region.area_convex,          # Convex area
-            "area_filled": region.area_filled,          # Filled area
-            "axis_major": region.axis_major_length,     # Major axis
-            "axis_minor": region.axis_minor_length,     # Minor axis
-            "eccentricity": region.eccentricity,        # Eccentricity
-            "euler_number": region.euler_number         # Euler feature
-        })
+        if remove_boundaries is False:
+            tracking_results.append({
+                "id": region.label,                         # Particle ID
+                "time": time,                               # Time (Frame)
+                "position_x": region.centroid[1],           # Centroid[1] is x
+                "position_y": region.centroid[0],           # Centroid[0] is y
+                "weighted_x": region.centroid_weighted[1],  # Weighted X
+                "weighted_y": region.centroid_weighted[0],  # Weighted Y
+                "darkest_v": min_intensity,                 # Darkest value
+                "darkest_x": min_intensity_coord[1],        # Darkest X
+                "darkest_y": min_intensity_coord[0],        # Darkest Y
+                "lightest_v": max_intensity,                # Lightest value
+                "lightest_x": max_intensity_coord[1],       # Lightest X
+                "lightest_y": max_intensity_coord[0],       # Lightest Y
+                "coords_x": region.coords[:, 1],            # Boundary in X
+                "coords_y": region.coords[:, 0],            # Boundary in Y
+                "orientation": region.orientation,          # Orientation
+                "area": region.area,                        # Region area
+                "area_convex": region.area_convex,          # Convex area
+                "area_filled": region.area_filled,          # Filled area
+                "axis_major": region.axis_major_length,     # Major axis
+                "axis_minor": region.axis_minor_length,     # Minor axis
+                "eccentricity": region.eccentricity,        # Eccentricity
+                "euler_number": region.euler_number         # Euler feature
+            })
+        else:
+            tracking_results.append({
+                "id": region.label,                         # Particle ID
+                "time": time,                               # Time (Frame)
+                "position_x": region.centroid[1],           # Centroid[1] is x
+                "position_y": region.centroid[0],           # Centroid[0] is y
+                "weighted_x": region.centroid_weighted[1],  # Weighted X
+                "weighted_y": region.centroid_weighted[0],  # Weighted Y
+                "darkest_v": min_intensity,                 # Darkest value
+                "darkest_x": min_intensity_coord[1],        # Darkest X
+                "darkest_y": min_intensity_coord[0],        # Darkest Y
+                "lightest_v": max_intensity,                # Lightest value
+                "lightest_x": max_intensity_coord[1],       # Lightest X
+                "lightest_y": max_intensity_coord[0],       # Lightest Y
+                "orientation": region.orientation,          # Orientation
+                "area": region.area,                        # Region area
+                "axis_major": region.axis_major_length,     # Major axis
+                "axis_minor": region.axis_minor_length,     # Minor axis
+                "eccentricity": region.eccentricity         # Eccentricity
+            })
 
     tracking_results = pd.DataFrame(tracking_results)
 
@@ -365,6 +390,7 @@ def process_multiple_frames(
     times: list,
     reinforce_boundaries: bool = True,
     remove_holes: bool = False,
+    remove_boundaries: bool = False,
     type: str = "equalized",
     clip_limit: float = 0.2,
     threshold: float = 0.2,
@@ -390,6 +416,9 @@ def process_multiple_frames(
     remove_holes : bool
         Remove holes and small objects for increasing performance in tracking
         algorithm
+    remove_boundaries : bool
+        Remove boundaries in the dataframe output for fast performance of
+        tracking algorithm
     type : str
         Type of equalization used (global or local equalization). Default value
         is "equalized"
@@ -475,6 +504,7 @@ def process_multiple_frames(
         process_frame,
         reinforce_boundaries,
         remove_holes,
+        remove_boundaries,
         type,
         clip_limit,
         threshold,

@@ -6,6 +6,7 @@ Created on Friday October 4th 2024
 """
 
 # Libraries ----
+import os
 import warnings
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
@@ -546,7 +547,6 @@ def plot_boundary_edge_frame(
 # Plot frame with tracked particle ----
 def plot_tracking_frame(
     reader,
-    time: int,
     df_tracked_frame: pd.DataFrame,
     width: int = 10,
     n_x_breaks: int = 20,
@@ -557,7 +557,11 @@ def plot_tracking_frame(
     y_zoom: list = [320, 520],
     fancy_legend: bool = False,
     x_legend: float = 1,
-    y_legend: float = 1
+    y_legend: float = 1,
+    save_figure: bool = False,
+    output_path: str = "../output_files",
+    output_name: str = "tp_proof",
+    time: int = 0
 ):
     """Plot a particular frame for video analysis with profiled process and
     boundaries (edges and contours)
@@ -566,8 +570,6 @@ def plot_tracking_frame(
     ---------------------------------------------------------------------------
     reader : imagaeio object
         Imageio array with all the frames extracted from the video
-    time : int
-        Index position of the frames detected in reader
     df_tracked_frame : pandas DataFrame
         Dataframe with the information of tracked regions with the following
         columns:
@@ -636,6 +638,14 @@ def plot_tracking_frame(
         X position of graph legend (default value 1)
     y_legend : float
         Y position of graph legend (default value 1)
+    save_figure: bool
+        Save tracked frame plot flag (default value False)
+    output_path : string
+        Local path for outputs. Default value is "../output_files"
+    output_name : string
+        Name of the output animation. Default value is "tp_proof"
+    time : int
+        Index position of the frames detected in reader (default value 0)
 
     Returns:
     ---------------------------------------------------------------------------
@@ -657,7 +667,8 @@ def plot_tracking_frame(
 
     frame = frame[x_bounds[0]: x_bounds[1], y_bounds[0]: y_bounds[1]]
 
-    num_colors = df_tracked_frame["id"].unique().shape[0]
+    df_ = df_tracked_frame[df_tracked_frame["time"] == time]
+    num_colors = df_["id"].unique().shape[0]
     colors = np.linspace(0, 1, num_colors)
     cmap = plt.get_cmap("autumn", num_colors)
     cmap.set_under("black")
@@ -666,8 +677,8 @@ def plot_tracking_frame(
     fig.set_size_inches(w=width, h=(frame.shape[0] * width / frame.shape[1]))
     ax.imshow(frame, cmap="gray")
 
-    for id in df_tracked_frame["id"].unique():
-        df_aux = df_tracked_frame[df_tracked_frame["id"] == id]
+    for id in df_["id"].unique():
+        df_aux = df_[df_["id"] == id]
         ax.plot(
             df_aux["position_x"].values,
             df_aux["position_y"].values,
@@ -704,15 +715,30 @@ def plot_tracking_frame(
             ls="",
             label=r"$l_{{{}}}$".format(id)
         )  # Lightest pixel
-        ax.plot(
-            df_aux["coords_x"].values[0],
-            df_aux["coords_y"].values[0],
-            c=cmap(colors[id]),
-            alpha=0.18,
-            marker="",
-            ls="--",
-            label=r"$r_{{{}}}$".format(id)
-        )  # Boundaries
+
+        length = 90
+        ax.arrow(
+            x=df_aux["position_x"].values[0],
+            y=df_aux["position_y"].values[0],
+            dx=length*np.sin(df_aux["orientation"].values)[0],
+            dy=length*np.cos(df_aux["orientation"].values)[0],
+            fc=cmap(colors[id]),
+            ec=cmap(colors[id]),
+            head_width=20,
+            head_length=20,
+            ls="-",
+            label=r"$p_{{{}}}$".format(id)
+        )  # Orientation
+        if "coords_x" in df_aux.columns:
+            ax.plot(
+                df_aux["coords_x"].values[0],
+                df_aux["coords_y"].values[0],
+                c=cmap(colors[id]),
+                alpha=0.18,
+                marker="",
+                ls="--",
+                label=r"$r_{{{}}}$".format(id)
+            )  # Boundaries
 
     ax.plot(
         [0, y_bounds[1] - y_bounds[0], y_bounds[1] - y_bounds[0], 0, 0],
@@ -755,7 +781,22 @@ def plot_tracking_frame(
         bbox_transform=fig.transFigure
     )
 
-    plt.show()
+    if save_figure:
+        # Create the output directory if it doesn't exist
+        output_folder = "{}/{}".format(output_path, output_name)
+        os.makedirs(output_folder, exist_ok=True)
+
+        # Save figure
+        fig.savefig(
+            "{}/frame_{}.png".format(output_folder, str(time).zfill(6)),
+            bbox_inches="tight",
+            facecolor=fig.get_facecolor(),
+            transparent=False,
+            pad_inches=0.03,
+            dpi=75
+        )
+
+        plt.close(fig)
 
 
 # Generate MP4 animation of the tracking alogrithm ----
@@ -936,15 +977,29 @@ def plot_tracking_animation(
                 ls="",
                 label=r"$l_{{{}}}$".format(id)
             )  # Lightest pixel
-            ax.plot(
-                df_aux["coords_x"].values[0],
-                df_aux["coords_y"].values[0],
-                c=cmap(colors[id]),
-                alpha=0.18,
-                marker="",
-                ls="--",
-                label=id
-            )  # Boundaries
+            length = 90
+            ax.arrow(
+                x=df_aux["position_x"].values[0],
+                y=df_aux["position_y"].values[0],
+                dx=length*np.sin(df_aux["orientation"].values)[0],
+                dy=length*np.cos(df_aux["orientation"].values)[0],
+                fc=cmap(colors[id]),
+                ec=cmap(colors[id]),
+                head_width=20,
+                head_length=20,
+                ls="-",
+                label=r"$p_{{{}}}$".format(id)
+            )  # Orientation
+            if "coords_x" in df_aux.columns:
+                ax.plot(
+                    df_aux["coords_x"].values[0],
+                    df_aux["coords_y"].values[0],
+                    c=cmap(colors[id]),
+                    alpha=0.18,
+                    marker="",
+                    ls="--",
+                    label=r"$r_{{{}}}$".format(id)
+                )  # Boundaries
 
         ax.plot(
             [0, y_bounds[1] - y_bounds[0], y_bounds[1] - y_bounds[0], 0, 0],
