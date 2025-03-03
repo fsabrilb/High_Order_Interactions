@@ -284,6 +284,7 @@ def get_allowed_frame(
                 # Filter current and previous data
                 current_time = unique_times[j]
                 previous_time = unique_times[i]
+                dt = np.min([current_time - previous_time, 15])
 
                 df_current = df_final[df_final["time"] == current_time]
                 df_previous = df_final[df_final["time"] == previous_time]
@@ -301,8 +302,8 @@ def get_allowed_frame(
                 current_velocities_x = df_current["position_x"].values
                 current_velocities_y = df_current["position_y"].values
 
-                velocities_x = (current_velocities_x - previous_velocities_x)  # noqa: 501
-                velocities_y = (current_velocities_y - previous_velocities_y)  # noqa: 501
+                velocities_x = (current_velocities_x - previous_velocities_x) / dt # noqa: 501
+                velocities_y = (current_velocities_y - previous_velocities_y) / dt # noqa: 501
                 mask_x = np.where(np.abs(velocities_x) <= velocity_threshold, True, False)  # noqa: 501
                 mask_y = np.where(np.abs(velocities_y) <= velocity_threshold, True, False)  # noqa: 501
 
@@ -325,7 +326,7 @@ def get_allowed_frame(
                         previous_sign == current_sign,
                         current_omega - previous_omega,
                         current_omega + previous_omega
-                    )
+                    ) / dt
                     orientation = np.where(
                         current_omega - previous_omega <= omega_threshold,
                         current_omega,
