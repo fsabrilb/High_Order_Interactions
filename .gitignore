@@ -8,6 +8,7 @@ rsconnect/
 # local folders
 input_files/
 output_files/
+logs/
 make_file_deployment.sh
 
 # local files

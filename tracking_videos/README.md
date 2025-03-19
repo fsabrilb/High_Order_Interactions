@@ -28,6 +28,38 @@ To improve tracking consistency, the following steps are applied:
 - **Interpolation:** Fills gaps in tracking data caused by dropped frames.
 - **Orientation Updates (Under Review):** Adjusts orientation calculations to better represent movement.
 
+## Notepad Application
+
+Finally, a Tkinter-based application for visualizing cockroach tracking data is built. Allows users to load CSV files, display tracking data, edit positions, and navigate through frames using keyboard shortcuts. with a user-friendly interface.
+
+### Features
+- Open `.txt` or `.csv` files.
+- Save text to `.txt` or `.csv` files.
+- Basic text editing.
+- Keyboard shortcuts for efficiency.
+
+### Keyboard Shortcuts
+| Shortcut              | Function              |
+|-----------------------|-----------------------|
+| `<Shift>`             | Enable Edit Positions |
+| `R`                   | Rotate last edited ID |
+| `T`                   | Move next frame       |
+| `E`                   | Move previous frame   |
+
+### Installation & Usage
+1. Ensure you have Python installed (version 3.x recommended).
+2. Run the script using:
+   ```sh
+   python ./modules/generate_tracking_widget.py
+   ```
+3. Use the menu or keyboard shortcuts to interact with the app.
+
+### Dependencies
+- `tkinter` (comes pre-installed with Python)
+
+### License
+This project is released under the MIT License.
+
 ## References
 For more details, refer to the following resources:
 - [Local Histogram Equalization](https://scikit-image.org/docs/stable/auto_examples/color_exposure/plot_local_equalize.html)

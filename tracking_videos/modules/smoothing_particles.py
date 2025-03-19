@@ -548,13 +548,4 @@ def smooth_frames(
             )
         df_final = df_final.sort_values(["time", "smooth_chunk", "permuted_id"])  # noqa: 501
 
-    # Linear interpolation over dropped frames
-    # for id_ in range(len(df_final["permuted_id"].unique())):
-    #     mask = df_final.loc[:,"permuted_id"]==df_final["permuted_id"].unique()[id_]  # noqa: 501
-    #     # df_final[mask]=df_final[mask].interpolate(method="linear")
-    #     df_final[mask]=(
-    #         df_final[mask].interpolate(method="nearest", order=3, limit=None, limit_direction=None)  # noqa: 501
-    #         .fillna(df_final[mask].interpolate(method="spline", order=3, limit=None, limit_direction='both'))  # noqa: 501
-    #      )
-
     return df_final
