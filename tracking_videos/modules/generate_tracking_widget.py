@@ -90,6 +90,61 @@ class CSVPlotterApp:
         )
         self.edit_position_button.pack(side=tk.LEFT, padx=5, pady=5)
 
+        # Swap ID Buttons
+        self.swap_button_1 = tk.Button(
+            self.top_frame,
+            text="Swap 0 ↔ 1",
+            command=lambda: self.swap_ids(0, 1),
+            font=("Calibri Light", 14),
+            bg="lightblue"
+        )
+        self.swap_button_1.pack(side=tk.LEFT, padx=5, pady=5)
+
+        self.swap_button_2 = tk.Button(
+            self.top_frame,
+            text="Swap 0 ↔ 2",
+            command=lambda: self.swap_ids(0, 2),
+            font=("Calibri Light", 14),
+            bg="lightblue"
+        )
+        self.swap_button_2.pack(side=tk.LEFT, padx=5, pady=5)
+
+        self.swap_button_3 = tk.Button(
+            self.top_frame,
+            text="Swap 0 ↔ 3",
+            command=lambda: self.swap_ids(0, 3),
+            font=("Calibri Light", 14),
+            bg="lightblue"
+        )
+        self.swap_button_3.pack(side=tk.LEFT, padx=5, pady=5)
+
+        self.swap_button_4 = tk.Button(
+            self.top_frame,
+            text="Swap 1 ↔ 2",
+            command=lambda: self.swap_ids(1, 2),
+            font=("Calibri Light", 14),
+            bg="lightgreen"
+        )
+        self.swap_button_4.pack(side=tk.LEFT, padx=5, pady=5)
+
+        self.swap_button_5 = tk.Button(
+            self.top_frame,
+            text="Swap 1 ↔ 3",
+            command=lambda: self.swap_ids(1, 3),
+            font=("Calibri Light", 14),
+            bg="lightgreen"
+        )
+        self.swap_button_5.pack(side=tk.LEFT, padx=5, pady=5)
+
+        self.swap_button_6 = tk.Button(
+            self.top_frame,
+            text="Swap 2 ↔ 3",
+            command=lambda: self.swap_ids(2, 3),
+            font=("Calibri Light", 14),
+            bg="lightcoral"
+        )
+        self.swap_button_6.pack(side=tk.LEFT, padx=5, pady=5)
+
         # Save CSV Button
         self.save_csv_button = tk.Button(
             self.top_frame,
@@ -120,6 +175,7 @@ class CSVPlotterApp:
         # Initial parameters
         self.data = None
         self.current_time = 0
+        self.time_step = 3  # Time step between tracked frames
         self.show_legend = True  # Flag for legend visibility
         self.edit_mode = False  # Edit mode flag
         self.selected_id = None
@@ -151,9 +207,48 @@ class CSVPlotterApp:
 
         # Bind keyboard shortcuts for user interaction
         self.root.bind("<Shift_L>", self.toggle_edit_mode)
-        self.root.bind("r", self.rotate_last_edited)  # Rotation (R)
-        self.root.bind("t", self.next_frame)  # Next Frame (T)
-        self.root.bind("e", self.prev_frame)  # Previous Frame (E)
+        self.root.bind("q", lambda event: self.rotate_id(0))  # Rotate ID 0 (Q)
+        self.root.bind("w", lambda event: self.rotate_id(1))  # Rotate ID 1 (W)
+        self.root.bind("e", lambda event: self.rotate_id(2))  # Rotate ID 2 (E)
+        self.root.bind("r", lambda event: self.rotate_id(3))  # Rotate ID 3 (R)
+        self.root.bind("<Left>", self.prev_frame)  # Previous Frame (E)
+        self.root.bind("<Right>", self.next_frame)  # Next Frame (T)
+        self.root.bind("x", lambda event: self.swap_ids(0, 1))  # Swap 0-1 (X)
+        self.root.bind("c", lambda event: self.swap_ids(0, 2))  # Swap 0-2 (C)
+        self.root.bind("v", lambda event: self.swap_ids(0, 3))  # Swap 0-3 (V)
+        self.root.bind("b", lambda event: self.swap_ids(1, 2))  # Swap 1-2 (B)
+        self.root.bind("n", lambda event: self.swap_ids(1, 3))  # Swap 1-3 (N)
+        self.root.bind("m", lambda event: self.swap_ids(2, 3))  # Swap 2-3 (M)
+
+    def swap_ids(self, from_id, to_id):
+        """Swaps two IDs in the dataset from the current time onward."""
+        if not self.edit_mode or self.data is None:
+            return
+
+        unique_ids = self.data["id"].unique()
+        num_ids = len(unique_ids)
+
+        # Ensure the swap meets the constraints
+        if (from_id, to_id) == (0, 2) and num_ids < 3:
+            return
+        if (from_id, to_id) == (1, 2) and num_ids < 3:
+            return
+        if (from_id, to_id) == (0, 3) and num_ids < 4:
+            return
+        if (from_id, to_id) == (1, 3) and num_ids < 4:
+            return
+        if (from_id, to_id) == (2, 3) and num_ids < 4:
+            return
+
+        # Perform ID swapping for current time and later frames
+        mask = self.data["time"] >= self.current_time
+        swap_mask_1 = (self.data["id"] == from_id) & mask
+        swap_mask_2 = (self.data["id"] == to_id) & mask
+
+        self.data.loc[swap_mask_1, "id"] = to_id
+        self.data.loc[swap_mask_2, "id"] = from_id
+
+        self.update_plot()
 
     def select_background_folder(self):
         """Opens a dialog for the user to select a background image folder."""
@@ -168,7 +263,8 @@ class CSVPlotterApp:
         file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])  # noqa: 501
         if file_path:
             self.data = pd.read_csv(file_path)
-            self.time_slider.config(to=self.data["time"].max())
+            self.data["orientation"] = self.data["corrected_orientation"]
+            self.time_slider.config(to=int(self.data["time"].max() / self.time_step))  # noqa: 501
             self.create_checkboxes()
             self.update_plot()
 
@@ -212,7 +308,7 @@ class CSVPlotterApp:
         """Updates the plot with current cockroach positions and
         orientations in tracked frames."""
         self.ax.clear()
-        self.current_time = self.time_slider.get()
+        self.current_time = int(self.time_step * self.time_slider.get())
 
         if self.data is not None:
             data_time = self.data[self.data["time"] == self.current_time]
@@ -307,8 +403,7 @@ class CSVPlotterApp:
         if self.data is None or self.selected_id is None:
             return
 
-        self.current_time = self.time_slider.get()
-        delta_t = 50
+        delta_t = 100
         mask = (
             (self.data["time"] >= self.current_time - delta_t) &
             (self.data["time"] <= self.current_time + delta_t)
@@ -380,7 +475,7 @@ class CSVPlotterApp:
         self.ax_x.set_xlim(min_time, max_time)
         self.ax_y.set_xlim(min_time, max_time)
         self.ax_o.set_xlim(min_time, max_time)
-        self.ax_o.set_ylim(-1.6, 1.6)
+        self.ax_o.set_ylim(-0.5 * np.pi, 1.5 * np.pi)
 
         # Ticks configuration in the X-axis
         n_x_breaks, n_y_breaks = 20, 10
@@ -407,7 +502,7 @@ class CSVPlotterApp:
 
     def add_background_image(self):
         """Load and adjust the background image in the selected folder."""
-        image_filename = f"frame_{self.current_time+1:06d}.png"
+        image_filename = f"frame_{self.current_time:06d}.png"
         image_path = os.path.join(self.background_folder, image_filename)
         if image_path not in self.background_cache:
             try:
@@ -468,8 +563,8 @@ class CSVPlotterApp:
         """Disable edit mode when mouse button is released."""
         self.selected_id = None
 
-    def rotate_last_edited(self, event):
-        """Changes the orientation of the selected point."""
+    def rotate_id(self, cockroach_id):
+        """Changes the orientation of the selected ID."""
         # Auxiliary function for angles
         def mod_pi_shifted(x):
             """
@@ -481,20 +576,22 @@ class CSVPlotterApp:
 
             Returns:
             float or array-like
-                The modulo result mapped within the range [-pi/2, pi/2].
+                The modulo result mapped within the range [-pi/2, 3 * pi/2].
             """
-            return (x + np.pi/2) % np.pi - np.pi/2
+            return (x + np.pi/2) % (2 * np.pi) - np.pi/2
 
-        if self.last_edited_id is not None and self.data is not None:
-            mask = (
-                (self.data["id"] == self.last_edited_id) &
-                (self.data["time"] == self.current_time)
-            )
-            theta = np.pi / 12  # Rotate by 15°
-            self.data.loc[mask, "orientation"] += theta
-            self.data["orientation"] = self.data["orientation"].apply(mod_pi_shifted)  # noqa: 501
+        if self.edit_mode and self.data is not None:
+            # Ensure the rotation meets the constraints
+            if cockroach_id in self.data["id"].unique():
+                mask = (
+                    (self.data["id"] == cockroach_id) &
+                    (self.data["time"] >= self.current_time)
+                )
+                theta = np.pi / 18  # Rotate by 10°
+                self.data.loc[mask, "orientation"] += theta  # noqa: 501
+                self.data["orientation"] = self.data["orientation"].apply(mod_pi_shifted)  # noqa: 501
 
-            self.update_plot()
+                self.update_plot()
 
     def save_csv(self):
         """Save the modified data of tracked cockroaches."""
@@ -504,6 +601,7 @@ class CSVPlotterApp:
                 filetypes=[("CSV files", "*.csv")]
             )
             if file_path:
+                self.data["corrected_orientation"] = self.data["orientation"]
                 self.data.to_csv(file_path, index=False)
 
     def on_resize(self, event):
