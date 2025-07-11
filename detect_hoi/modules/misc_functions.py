@@ -11,10 +11,54 @@ import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
 import networkx as nx  # type: ignore
 
+from tqdm import tqdm  # type: ignore
+from multiprocessing import Pool, cpu_count
+
 # Global options ----
 warnings.filterwarnings("ignore")
 pd.options.mode.chained_assignment = None
 pd.set_option('display.max_columns', None)
+
+
+# Deployment of parallel run in function of arguments list ----
+def parallel_run(
+    fun,
+    arg_list,
+    tqdm_bar: bool = False
+):
+    """Implement parallel run in arbitrary function with input arg_list:
+
+    Args:
+    ---------------------------------------------------------------------------
+    fun : function
+        Function to implement in parallel
+    arg_list : list of tuples
+        List of arguments to pass in function
+    tqdm_bar : bool
+        Progress bar (default value is False)
+
+    Returns:
+    ---------------------------------------------------------------------------
+    m : list of objects
+        Function evaluation in all possible combination of tuples
+    """
+
+    if tqdm_bar:
+        m = []
+        with Pool(processes=cpu_count()) as p:
+            with tqdm(total=len(arg_list), ncols=60) as pbar:
+                for _ in p.imap(fun, arg_list):
+                    m.append(_)
+                    pbar.update()
+            p.terminate()
+            p.join()
+    else:
+        p = Pool(processes=cpu_count())
+        m = p.map(fun, arg_list)
+        p.terminate()
+        p.join()
+
+    return m
 
 
 # Estimate distance between two positions time series ----
@@ -79,10 +123,10 @@ def estimate_distances(
                 id_pair = str(id_1) + str(id_2)
                 print("- Pair: {}".format(id_pair))
                 time = df[df["permuted_id"] == id_1]["time"].values
-                x1 = df[df["permuted_id"] == id_1]["position_x"].values
-                x2 = df[df["permuted_id"] == id_2]["position_x"].values
-                y1 = df[df["permuted_id"] == id_1]["position_y"].values
-                y2 = df[df["permuted_id"] == id_2]["position_y"].values
+                x1 = df[df["permuted_id"] == id_1]["n_x"].values
+                x2 = df[df["permuted_id"] == id_2]["n_x"].values
+                y1 = df[df["permuted_id"] == id_1]["n_y"].values
+                y2 = df[df["permuted_id"] == id_2]["n_y"].values
                 distance = np.sqrt(np.power(x2 - x1, 2) + np.power(y2 - y1, 2))
                 df_final.append(
                     pd.DataFrame({
