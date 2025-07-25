@@ -28,7 +28,7 @@ def plot_gliding_oinfo(
     output_name: str = "plot_gliding"
 ):
     """
-    Plot the O-information and HoI metrics over many multiplets.
+    Plot the O-information and HoI metrics over many multiplets for one video.
 
     Parameters:
     -----------
@@ -43,9 +43,9 @@ def plot_gliding_oinfo(
             - "oinfo_distance": The estimated O-information over distances from
             center.
             - "oinfo_orientation": The estimated O-information over angles.
-            - "dO_info_distance": The estimated dynamic O-information over
+            - "sinfo_distance": The estimated exogenous information over
             distances from center.
-            - "dO_info_orientation": The estimated dynamic O-information over
+            - "sinfo_orientation": The estimated exogenous information over
             angles.
     width : int
         Width of final plot. Default value 10
@@ -64,28 +64,16 @@ def plot_gliding_oinfo(
     output_name : string
         Name of the output. Default value is "plot_gliding"
     """
-    dicc_multiplet = {
-        "012": 1,
-        "013": 2,
-        "023": 3,
-        "123": 4,
-        "0123": 5
-    }
-
     legend_labels = []
     legend_handles = []
-    fig, axes = plt.subplots(6, 4, figsize=(width, height))
+    fig, axes = plt.subplots(1, 4, figsize=(width, height))
     for video in df_oinfo["video"].unique():
         particles = video[0]
-        males = video[3]
-        females = video[6]
-
         mask_1 = df_oinfo["video"] == video
         for m in df_oinfo[mask_1]["multiplet"].unique():
             mask = mask_1 & (df_oinfo["multiplet"] == m)
-            title = males + "M" + females + "F - " + str(m)
-            label = 0 if int(particles) == 3 else dicc_multiplet.get(m, -1)
-            if label == -1:
+            title = video + " - " + str(m)
+            if int(particles) < 3:
                 continue  # skip unrecognized multiplets
 
             # Time series data
@@ -93,12 +81,12 @@ def plot_gliding_oinfo(
             s = df["size"].values
             od = df["oinfo_distance"].values
             oa = df["oinfo_orientation"].values
-            dod = df["dO_info_distance"].values
-            doa = df["dO_info_orientation"].values
+            sd = df["sinfo_distance"].values
+            sa = df["sinfo_orientation"].values
 
             # Plot into axes
-            for j, y in enumerate([od, oa, dod, doa]):
-                axes[label][j].hlines(
+            for j, y in enumerate([od, oa, sd, sa]):
+                axes[j].hlines(
                     0,
                     xmin=np.min(s),
                     xmax=np.max(s),
@@ -106,7 +94,7 @@ def plot_gliding_oinfo(
                     ls="--",
                     lw=0.8
                 )
-                axes[label][j].plot(
+                axes[j].plot(
                     s,
                     y,
                     label=title,
@@ -114,48 +102,44 @@ def plot_gliding_oinfo(
                     ls="",
                     ms=4
                 )
-                legend_handles.append(axes[label][j].lines[-1])
+                legend_handles.append(axes[j].lines[-1])
                 legend_labels.append(title)
 
                 # Axes labels
-                axes[label][j].set_xlabel(
-                    "Window size ($\\omega$)",
-                    fontsize=14
-                )
+                axes[j].set_xlabel("Window size ($\\omega$)", fontsize=14)
 
-            axes[label][0].set_ylabel(r"$\Omega_{" + particles + r"}^{D}(t)$", fontsize=14)  # noqa: 501
-            axes[label][1].set_ylabel(r"$\Omega_{" + particles + r"}^{\theta}(t)$", fontsize=14)  # noqa: 501
-            axes[label][2].set_ylabel(r"$d\Omega_{" + particles + r"}^{D}(t)$", fontsize=14)  # noqa: 501
-            axes[label][3].set_ylabel(r"$d\Omega_{" + particles + r"}^{\theta}(t)$", fontsize=14)  # noqa: 501
+            axes[0].set_ylabel(r"$\Omega_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
+            axes[1].set_ylabel(r"$\Omega_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
+            axes[2].set_ylabel(r"$S_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
+            axes[3].set_ylabel(r"$S_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
 
     # Global plot settings
-    for i in range(6):
-        for j in range(4):
-            axes[i][j].tick_params(
-                which="major",
-                direction="in",
-                top=True,
-                right=True,
-                labelsize=11,
-                length=12
-            )
-            axes[i][j].tick_params(
-                which="minor",
-                direction="in",
-                top=True,
-                right=True,
-                labelsize=11,
-                length=6
-            )
-            axes[i][j].xaxis.set_major_locator(mtick.MaxNLocator(n_x_breaks))
-            axes[i][j].xaxis.set_minor_locator(mtick.MaxNLocator(4 * n_x_breaks))  # noqa: 501
-            axes[i][j].yaxis.set_major_locator(mtick.MaxNLocator(n_y_breaks))
-            axes[i][j].yaxis.set_minor_locator(mtick.MaxNLocator(5 * n_y_breaks))  # noqa: 501
-            axes[i][j].tick_params(axis="x", labelrotation=90)
+    for j in range(4):
+        axes[j].tick_params(
+            which="major",
+            direction="in",
+            top=True,
+            right=True,
+            labelsize=11,
+            length=12
+        )
+        axes[j].tick_params(
+            which="minor",
+            direction="in",
+            top=True,
+            right=True,
+            labelsize=11,
+            length=6
+        )
+        axes[j].xaxis.set_major_locator(mtick.MaxNLocator(n_x_breaks))
+        axes[j].xaxis.set_minor_locator(mtick.MaxNLocator(5 * n_x_breaks))
+        axes[j].yaxis.set_major_locator(mtick.MaxNLocator(n_y_breaks))
+        axes[j].yaxis.set_minor_locator(mtick.MaxNLocator(5 * n_y_breaks))
+        axes[j].tick_params(axis="x", labelrotation=90)
 
     fig.legend(
-        legend_handles,
-        legend_labels,
+        list(set(legend_handles)),
+        list(set(legend_labels)),
         loc="center left",
         bbox_to_anchor=(1.001, 0.5),
         fontsize=12,
@@ -167,11 +151,11 @@ def plot_gliding_oinfo(
     if save_figure:
         os.makedirs(output_path, exist_ok=True)
         full_path = os.path.join(output_path, f"{output_name}.png")
-        fig.savefig(full_path, dpi=300)
+        fig.savefig(full_path, dpi=400)
         print(f"Figure saved to {full_path}")
-    else:
-        plt.show()
-    return axes
+    plt.close()
+
+    return fig, axes
 
 
 # Plot high-order interactions (HoI) measures (Summary) ----
@@ -202,9 +186,9 @@ def plot_hoi_metrics_summary(
             - "oinfo_distance": The estimated O-information over distances from
             center.
             - "oinfo_orientation": The estimated O-information over angles.
-            - "dO_info_distance": The estimated dynamic O-information over
+            - "sinfo_distance": The estimated exogenous information over
             distances from center.
-            - "dO_info_orientation": The estimated dynamic O-information over
+            - "sinfo_orientation": The estimated exogenous information over
             angles.
     width : int
         Width of final plot. Default value 10
@@ -230,7 +214,7 @@ def plot_hoi_metrics_summary(
 
     hoi_metrics = [
         "oinfo_distance", "oinfo_orientation",
-        "dO_info_distance", "dO_info_orientation"
+        "sinfo_distance", "sinfo_orientation"
     ]
 
     g1 = ["video", "multiplet", "size"]
@@ -322,10 +306,10 @@ def plot_hoi_metrics_summary(
                     "Window size ($\\omega$)",
                     fontsize=14
                 )
-            axes_1[label][0].set_ylabel(r"$\Omega_{" + particles + r"}^{D}(t)$", fontsize=14)  # noqa: 501
-            axes_1[label][1].set_ylabel(r"$\Omega_{" + particles + r"}^{\theta}(t)$", fontsize=14)  # noqa: 501
-            axes_1[label][2].set_ylabel(r"$d\Omega_{" + particles + r"}^{D}(t)$", fontsize=14)  # noqa: 501
-            axes_1[label][3].set_ylabel(r"$d\Omega_{" + particles + r"}^{\theta}(t)$", fontsize=14)  # noqa: 501
+            axes_1[label][0].set_ylabel(r"$\Omega_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
+            axes_1[label][1].set_ylabel(r"$\Omega_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
+            axes_1[label][2].set_ylabel(r"$S_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
+            axes_1[label][3].set_ylabel(r"$S_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
 
     # Figure 2 - Sex ratio
     legend_labels_2 = []
@@ -390,10 +374,10 @@ def plot_hoi_metrics_summary(
                     "Window size ($\\omega$)",
                     fontsize=14
                 )
-            axes_2[label][0].set_ylabel(r"$\Omega_{" + particles + r"}^{D}(t)$", fontsize=14)  # noqa: 501
-            axes_2[label][1].set_ylabel(r"$\Omega_{" + particles + r"}^{\theta}(t)$", fontsize=14)  # noqa: 501
-            axes_2[label][2].set_ylabel(r"$d\Omega_{" + particles + r"}^{D}(t)$", fontsize=14)  # noqa: 501
-            axes_2[label][3].set_ylabel(r"$d\Omega_{" + particles + r"}^{\theta}(t)$", fontsize=14)  # noqa: 501
+            axes_2[label][0].set_ylabel(r"$\Omega_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
+            axes_2[label][1].set_ylabel(r"$\Omega_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
+            axes_2[label][2].set_ylabel(r"$S_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
+            axes_2[label][3].set_ylabel(r"$S_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
 
     # Styling
     for i in range(2):
@@ -416,14 +400,14 @@ def plot_hoi_metrics_summary(
                     length=6
                 )
                 ax[i][j].xaxis.set_major_locator(mtick.MaxNLocator(n_x_breaks))
-                ax[i][j].xaxis.set_minor_locator(mtick.MaxNLocator(4 * n_x_breaks))  # noqa: 501
+                ax[i][j].xaxis.set_minor_locator(mtick.MaxNLocator(5 * n_x_breaks))  # noqa: 501
                 ax[i][j].yaxis.set_major_locator(mtick.MaxNLocator(n_y_breaks))
                 ax[i][j].yaxis.set_minor_locator(mtick.MaxNLocator(5 * n_y_breaks))  # noqa: 501
                 ax[i][j].tick_params(axis="x", labelrotation=90)
 
     fig_1.legend(
-        legend_handles_1,
-        legend_labels_1,
+        list(set(legend_handles_1)),
+        list(set(legend_labels_1)),
         loc="center left",
         bbox_to_anchor=(1.001, 0.5),
         fontsize=12,
@@ -433,8 +417,8 @@ def plot_hoi_metrics_summary(
     fig_1.tight_layout(rect=[0, 0, 0.99, 1])  # reserve space for legend
 
     fig_2.legend(
-        legend_handles_2,
-        legend_labels_2,
+        list(set(legend_handles_2)),
+        list(set(legend_labels_2)),
         loc="center left",
         bbox_to_anchor=(1.001, 0.5),
         fontsize=12,
@@ -447,9 +431,10 @@ def plot_hoi_metrics_summary(
         os.makedirs(output_path, exist_ok=True)
         full_path_1 = os.path.join(output_path, f"{output_name}_video.png")
         full_path_2 = os.path.join(output_path, f"{output_name}_sexratio.png")
-        fig_1.savefig(full_path_1, dpi=300)
-        fig_2.savefig(full_path_2, dpi=300)
+        fig_1.savefig(full_path_1, dpi=400)
+        fig_2.savefig(full_path_2, dpi=400)
         print(f"Figure saved to {full_path_1} and {full_path_2}")
-    else:
-        plt.show()
-    return df, axes_1, axes_2
+    plt.close()
+    plt.close()
+
+    return df, fig_1, fig_2, axes_1, axes_2

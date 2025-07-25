@@ -12,7 +12,7 @@ import pandas as pd  # type: ignore
 import misc_functions as mf
 
 from functools import partial
-from hoi.metrics import Oinfo, InfoTopo  # type: ignore
+from hoi.metrics import Oinfo, Sinfo  # type: ignore
 
 # Global options ----
 warnings.filterwarnings("ignore")
@@ -43,9 +43,9 @@ def estimate_oinfo(df: pd.DataFrame) -> pd.DataFrame:
             - "oinfo_distance": The estimated O-information over distances from
             center.
             - "oinfo_orientation": The estimated O-information over angles.
-            - "dO_info_distance": The estimated dynamic O-information over
+            - "sinfo_distance": The estimated exogenous information over
             distances from center.
-            - "dO_info_orientation": The estimated dynamic O-information over
+            - "sinfo_orientation": The estimated exogenous information over
             angles.
     """
 
@@ -80,8 +80,8 @@ def estimate_oinfo(df: pd.DataFrame) -> pd.DataFrame:
         # Define O-information model from HoI library classes
         model_1 = Oinfo(data_1, verbose=0)
         model_2 = Oinfo(data_2, verbose=0)
-        model_3 = InfoTopo(data_1, verbose=0)
-        model_4 = InfoTopo(data_2, verbose=0)
+        model_3 = Sinfo(data_1, verbose=0)
+        model_4 = Sinfo(data_2, verbose=0)
 
         # Compute HoI metric using the Gaussian Copula entropy
         hoi_value_1 = model_1.fit(minsize=3, maxsize=3, method="gc")
@@ -97,8 +97,8 @@ def estimate_oinfo(df: pd.DataFrame) -> pd.DataFrame:
             "multiplet": ["012"],
             "oinfo_distance": hoi_value_1[0],
             "oinfo_orientation": hoi_value_2[0],
-            "dO_info_distance": hoi_value_3[0],
-            "dO_info_orientation": hoi_value_4[0]
+            "sinfo_distance": hoi_value_3[0],
+            "sinfo_orientation": hoi_value_4[0]
         })
 
     if int(video[0]) == 4:
@@ -117,8 +117,8 @@ def estimate_oinfo(df: pd.DataFrame) -> pd.DataFrame:
         # Define O-information model from HoI library classes
         model_1 = Oinfo(data_1, verbose=0)
         model_2 = Oinfo(data_2, verbose=0)
-        model_3 = InfoTopo(data_1, verbose=0)
-        model_4 = InfoTopo(data_2, verbose=0)
+        model_3 = Sinfo(data_1, verbose=0)
+        model_4 = Sinfo(data_2, verbose=0)
 
         # Compute HoI metric using the Gaussian Copula entropy
         hoi_value_1 = model_1.fit(minsize=3, maxsize=4, method="gc")
@@ -134,8 +134,8 @@ def estimate_oinfo(df: pd.DataFrame) -> pd.DataFrame:
             "multiplet": ["012", "013", "023", "123", "0123"],
             "oinfo_distance": hoi_value_1.reshape(1, 5)[0],
             "oinfo_orientation": hoi_value_2.reshape(1, 5)[0],
-            "dO_info_distance": hoi_value_3.reshape(1, 5)[0],
-            "dO_info_orientation": hoi_value_4.reshape(1, 5)[0]
+            "sinfo_distance": hoi_value_3.reshape(1, 5)[0],
+            "sinfo_orientation": hoi_value_4.reshape(1, 5)[0]
         })
 
     return df_oinfo
@@ -178,9 +178,9 @@ def estimate_oinfo_gliding_window(
             - "oinfo_distance": The estimated O-information over distances from
             center.
             - "oinfo_orientation": The estimated O-information over angles.
-            - "dO_info_distance": The estimated dynamic O-information over
+            - "sinfo_distance": The estimated exogenous information over
             distances from center.
-            - "dO_info_orientation": The estimated dynamic O-information over
+            - "sinfo_orientation": The estimated exogenous information over
             angles.
     """
 
@@ -256,9 +256,9 @@ def estimate_oinfo_multiple_windows(
             - "oinfo_distance": The estimated O-information over distances from
             center.
             - "oinfo_orientation": The estimated O-information over angles.
-            - "dO_info_distance": The estimated dynamic O-information over
+            - "sinfo_distance": The estimated exogenous information over
             distances from center.
-            - "dO_info_orientation": The estimated dynamic O-information over
+            - "sinfo_orientation": The estimated exogenous information over
             angles.
     """
 

@@ -7,14 +7,12 @@ Created on Friday March 6th 2025
 
 # Libraries ----
 import warnings
+import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
-import networkx as nx  # type: ignore
 import misc_functions as mf
-import matplotlib.pyplot as plt  # type: ignore
-import matplotlib.ticker as mtick  # type: ignore
 
 from ts2vg import NaturalVG  # type: ignore
-from matplotlib import rcParams  # type: ignore
+from functools import partial
 
 # Global options ----
 warnings.filterwarnings("ignore")
@@ -22,18 +20,14 @@ pd.options.mode.chained_assignment = None
 pd.set_option("display.max_columns", None)
 
 
-# Estimate Visibility Graph ----
-def estimate_vg(
+# Estimate Visibility Graph over multiple periods and distance pairs ----
+def estimate_gliding_vg(
     df: pd.DataFrame,
-    filter_step: int = None,
-    width: float = 12,
-    height: float = 28,
-    n_x_breaks: int = 20,
-    n_y_breaks: int = 20,
-    fancy_legend: bool = False,
-    usetex: bool = False,
-    t_range: list = [0, 100]
-) -> list:
+    log_path: str,
+    log_filename: str,
+    verbose: int,
+    arg_list: list
+) -> pd.DataFrame:
     """Estimate visibility graph and its properties for the time series of
     distances between two individuals. The data has the following columns:
         - id: Particle ID
@@ -65,144 +59,173 @@ def estimate_vg(
         length. The value is in the interval [0, 1). When it is 0, the ellipse
         becomes a circle
 
-    Args:
-    ---------------------------------------------------------------------------
+    Parameters:
+    -----------
     df : pd.DataFrame
-        Dataframe with the information of tracked regions
-    filter_step : int
-        Number of steps between consecutive times, i.e., the number of skipped
-        steps
-    width : float
-        Width of final plot (default value 12)
-    height : float
-        Height of final plot (default value 28)
-    n_x_breaks : int
-        Number of divisions in x-axis (default value 10)
-    n_y_breaks : int
-        Number of divisions in y-axis (default value 10)
-    fancy_legend : bool
-        Fancy legend output (default value False)
-    usetex : bool
-        Use LaTeX for renderized plots (default value False)
-    t_range : list
-        Lower ([0]) and upper ([1]) threshold for the filtration of time series
-        data points range
+        Dataframe with the information of tracked regions.
+    log_path : str
+        Directory path where log files will be saved.
+    log_filename : str
+        Name of the log file to store output messages.
+    verbose : int
+        Verbosity level. If >=1, progress messages and errors will be logged.
+    arg_list : list
+        - arg_list[0]: Window size for the evaluation of complex network
+        measures.
 
     Returns:
-    ---------------------------------------------------------------------------
+    --------
     df_all : pd.DataFrame
-        Dataframe with the summary of global complex network measures
-    df_all_nodes : pd.DataFrame
-        Dataframe with the summary of complex network measures over each node
-    fig : fig
-        Figure with the time series, visibility graph, and degree distribution
-    ax : ax
-        Axes with the time series, visibility graph, and degree distribution
+        Dataframe of distances and orientation with the summary of global
+        complex network measures
+    df_nodes : pd.DataFrame
+        Dataframe of distances and orientation with the summary of complex
+        network measures over each node
     """
 
-    # Construct time series of distances between particles
-    mask = (df["time"].between(t_range[0], t_range[1]))
-    df_distances = mf.estimate_distances(df=df[mask], filter_step=filter_step)
-    pairs = df_distances["id_pair"].unique()
-
-    # Initialize Plot Graph
-    rcParams.update({
-        "font.family": "serif",
-        "text.usetex": usetex,
-        "pgf.rcfonts": False,
-        "text.latex.preamble": r"\usepackage{amsfonts}"
-    })
-
-    fig, ax = plt.subplots(len(pairs), 4, squeeze=False)
-    fig.set_size_inches(w=width, h=height)
-
-    graph_plot_options = {
-        "with_labels": False,
-        "node_size": 2.5,
-        "node_color": [(0, 0, 0, 1)],
-        "edge_color": [(0, 0, 0, 0.15)]
-    }
+    # Extract parameters from arg_list (Window size)
+    ws = arg_list[0]
+    t_min = df["time"].min()
+    t_max = df["time"].max()
+    windows = (t_max - t_min) // ws
+    video = df["video"].unique()[0]
 
     # Network analysis over pairs
-    df_all = []
-    df_all_nodes = []
-    for j, id_pair in enumerate(pairs):
-        mask = (df_distances["id_pair"] == id_pair)
-        times = df_distances[mask]["time"].values
-        distances = df_distances[mask]["distance"].values
-        graph = NaturalVG(directed=None).build(distances, times)
-        nxg = graph.as_networkx()  # From ts2vg
-        df, df_local = mf.summarize_complex_network(nxg=nxg)
+    df_all_d = []
+    df_all_o = []
+    df_all_nodes_d = []
+    df_all_nodes_o = []
+    for w in range(windows):
+        t0 = ws * w
+        tf = ws * (w + 1)
+        mask = (df["time"].between(t0, tf))
+        for idx in df[mask]["permuted_id"].unique():
+            # Get data for complexity measures
+            df1 = df[((mask) & (df["permuted_id"] == idx))]
+            t_min = df1["time"].min()
+            t_max = df1["time"].max()
+            dt = t_max - t_min
+            t = str(t_min) + " - " + str(t_max)
 
-        # Add local information
-        df["id_pair"] = id_pair
-        df_local["id_pair"] = id_pair
+            x = df1[df1["permuted_id"] == idx]["position_x"].values
+            y = df1[df1["permuted_id"] == idx]["position_y"].values
+            o = df1[df1["permuted_id"] == idx]["corrected_orientation"].values
 
-        df["t_range"] = str(t_range[0]) + "_" + str(t_range[1])
-        df_local["t_range"] = str(t_range[0]) + "_" + str(t_range[1])
+            # Estimate distances time series
+            d = np.power(np.power(x, 2) + np.power(y, 2), 1 / 2)
 
-        df_all.append(df)
-        df_all_nodes.append(df_local)
+            # Generate Natural Visibility Graph
+            graph_d = NaturalVG(directed=None).build(d, df1["time"].values)
+            graph_o = NaturalVG(directed=None).build(o, df1["time"].values)
+            nxgd = graph_d.as_networkx()  # From ts2vg
+            nxgo = graph_o.as_networkx()  # From ts2vg
+            df_d, df_local_d = mf.summarize_complex_network(nxg=nxgd)
+            df_o, df_local_o = mf.summarize_complex_network(nxg=nxgo)
 
-        # Add local plot
-        label = "$d_{{{}}}(t)$".format(id_pair)
-        degrees = df_local["degree"].values
+            # Add local information
+            dicc_v = {
+                "video": video,
+                "t_range": t,
+                "size": dt,
+                "permuted_id": idx
+            }
+            for k, v in dicc_v.items():
+                df_d[k] = v
+                df_o[k] = v
+                df_local_d[k] = v
+                df_local_o[k] = v
 
-        nx.draw_networkx(
-            nxg,
-            ax=ax[j, 1],
-            pos=graph.node_positions(),
-            **graph_plot_options
-        )
-        nx.draw_networkx(
-            nxg, ax=ax[j, 2],
-            pos=nx.kamada_kawai_layout(nxg),
-            **graph_plot_options
-        )
+            df_d["type"] = "distance"
+            df_o["type"] = "orientation"
+            df_local_d["type"] = "distance"
+            df_local_o["type"] = "orientation"
 
-        ax[j, 0].plot(times, distances, label=label, ls="solid", lw=3)
-        ax[j, 1].plot(times, distances, label=label, ls="solid", lw=3)
-        ax[j, 3].hist(
-            degrees,
-            label=label,
-            alpha=0.19,
-            facecolor="blue",
-            edgecolor="darkblue",
-            density=False,
-            histtype="stepfilled",
-            cumulative=False
-        )
+            df_all_d.append(df_d)
+            df_all_o.append(df_o)
+            df_all_nodes_d.append(df_local_d)
+            df_all_nodes_o.append(df_local_o)
 
-        # Other plot settings
-        ax[j, 0].set_ylabel("$d(t)$")
-        ax[j, 0].set_xlabel("Time (t)", fontsize=16)
-        ax[j, 0].set_title("Distance time series")
-        ax[j, 1].set_ylabel("$d(t)$")
-        ax[j, 1].set_xlabel("Time (t)", fontsize=16)
-        ax[j, 1].set_title("Distance and Visibility Graph")
-        ax[j, 2].set_title("Visibility Graph (VG)")
-        ax[j, 3].set_title("VG - Degrees distribution")
-
-        for k in [0, 1, 3]:
-            ax[j, k].legend(fancybox=fancy_legend, fontsize=14)
-            ax[j, k].tick_params(which="major", direction="in", top=True, right=True, labelsize=11, length=12)  # noqa: 501
-            ax[j, k].tick_params(which="minor", direction="in", top=True, right=True, labelsize=11, length=6)  # noqa: 501
-            ax[j, k].xaxis.set_major_locator(mtick.MaxNLocator(n_x_breaks))
-            ax[j, k].xaxis.set_minor_locator(mtick.MaxNLocator(4 * n_x_breaks))
-            ax[j, k].yaxis.set_major_locator(mtick.MaxNLocator(n_y_breaks))
-            ax[j, k].yaxis.set_minor_locator(mtick.MaxNLocator(5 * n_y_breaks))
-            ax[j, k].tick_params(axis="x", labelrotation=90)
-
-    plt.tight_layout()
-    plt.close()
+        # Function development (Logging if verbosity is enabled)
+        if verbose >= 1:
+            with open(f"{log_path}/{log_filename}.txt", "a") as file:
+                file.write(
+                    "Network metrics video: {} - window: {} - s:{}\n".format(
+                        video,
+                        w,
+                        ws
+                    )
+                )
 
     # Final merge and relocation of new columns
-    df_all = pd.concat(df_all, ignore_index=True)
-    df_all_nodes = pd.concat(df_all_nodes, ignore_index=True)
+    df_all_d = pd.concat(df_all_d, ignore_index=True)
+    df_all_o = pd.concat(df_all_o, ignore_index=True)
+    df_all_nodes_d = pd.concat(df_all_nodes_d, ignore_index=True)
+    df_all_nodes_o = pd.concat(df_all_nodes_o, ignore_index=True)
 
-    df_all.insert(0, "id_pair", df_all.pop("id_pair"))
-    df_all_nodes.insert(0, "id_pair", df_all_nodes.pop("id_pair"))
-    df_all.insert(1, "t_range", df_all.pop("t_range"))
-    df_all_nodes.insert(1, "t_range", df_all_nodes.pop("t_range"))
+    df_all = pd.concat([df_all_d, df_all_o], ignore_index=True)
+    df_nodes = pd.concat([df_all_nodes_d, df_all_nodes_o], ignore_index=True)
 
-    return df_all, df_all_nodes, fig, ax
+    cols = ["type", "video", "t_range", "size", "permuted_id"]
+    for i, v in enumerate(cols):
+        df_all.insert(i, v, df_all.pop(v))
+        df_nodes.insert(i, v, df_nodes.pop(v))
+
+    return df_all, df_nodes
+
+
+# Estime Visibility Graph for a given period (interval of frames) ----
+def estimate_multiple_vg(
+    df: pd.DataFrame,
+    window_sizes: list,
+    log_path: str = "../logs",
+    log_filename: str = "log_network",
+    verbose: int = 1,
+    tqdm_bar: bool = True
+) -> pd.DataFrame:
+    """
+    Estimate the Visibility Graph over many multiplets and windows.
+
+    Parameters:
+    -----------
+    df : pd.DataFrame
+        Dataframe with the information of tracked regions
+    window_sizes : list
+        Window sizes for estimating Visibility Graph.
+    log_path : str
+        Directory path where log files will be saved.
+    log_filename : str
+        Name of the log file to store output messages.
+    verbose : int
+        Verbosity level. If >=1, progress messages and errors will be logged.
+    tqdm_bar : bool
+        Progress bar in parallel run (default value is True)
+
+    Returns:
+    --------
+    df_all : pd.DataFrame
+        Dataframe of distances and orientation with the summary of global
+        complex network measures
+    df_nodes : pd.DataFrame
+        Dataframe of distances and orientation with the summary of complex
+        network measures over each node
+    """
+
+    # Auxiliary function for parallel running
+    fun_local = partial(
+        estimate_gliding_vg,
+        df,
+        log_path,
+        log_filename,
+        verbose
+    )
+
+    # Parallel loop for complexity metrics
+    data = mf.parallel_run(
+        fun=fun_local,
+        arg_list=window_sizes,
+        tqdm_bar=tqdm_bar
+    )
+    data = zip(*data)
+    df_all, df_nodes = [pd.concat(group, ignore_index=True) for group in data]
+
+    return df_all, df_nodes

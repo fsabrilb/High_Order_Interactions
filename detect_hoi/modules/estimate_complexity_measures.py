@@ -47,7 +47,7 @@ def estimate_hurst_complexity(
 
     where $\mathcal{S}_{N}$ is the Symmetric group of size $N$, $p_{\pi}$ is
     the permutation probabilities, and $D_{JS}$ is the disequilibrium or
-    Jensen–Shannon (JS) divergence between $p_{\pi}$ and uniform distribution.
+    Jensen-Shannon (JS) divergence between $p_{\pi}$ and uniform distribution.
 
     Parameters:
     -----------
@@ -70,7 +70,7 @@ def estimate_hurst_complexity(
     Raises:
     -------
     Warning:
-        If the data series length is below 100, a warning is issued.
+        If the data series length is below 300, a warning is issued.
 
     References:
     -----------
@@ -139,7 +139,7 @@ def estimate_hurst_complexity(
     return H, perm_ent, complexity
 
 
-# Estime Hurst exponent over multiple periods and distance pairs ----
+# Estime Hurst exponent over multiple periods and IDs ----
 def estimate_gliding_hurst_complexity(
     df: pd.DataFrame,
     q: int,
@@ -180,9 +180,10 @@ def estimate_gliding_hurst_complexity(
         A DataFrame containing the estimated $H(q)$, $S_{P}$ and $C_{JS}$. The
         DataFrame includes the following columns:
             - "video": Video name.
-            - "t_range": The timestamp at which the O-information was
+            - "t_range": The timestamp at which the Hurst exponent was
             estimated.
-            - "size": The window size at which the O-information was estimated.
+            - "size": The window size at which the Hurst exponent was
+            estimated.
             - "permuted_id": The identifier for each distance ID.
             - "H": The estimated Hurst exponent.
             - "PE": The estimated permutation entropy.
@@ -253,7 +254,7 @@ def estimate_gliding_hurst_complexity(
     return df_complexity
 
 
-# Estime O-information for a given period (interval of frames) ----
+# Estime Hurst exponent for a given period (interval of frames) ----
 def estimate_multiple_hurst_complexity(
     df: pd.DataFrame,
     window_sizes: list,
@@ -266,14 +267,14 @@ def estimate_multiple_hurst_complexity(
     tqdm_bar: bool = True
 ) -> pd.DataFrame:
     """
-    Estimate the O-information over many multiplets and windows.
+    Estimate the Hurst exponent over many multiplets and windows.
 
     Parameters:
     -----------
     df : pd.DataFrame
         Dataframe with the information of tracked regions
     window_sizes : list
-        Window sizes for estimating O-information
+        Window sizes for estimating Hurst exponent
     q : int
         The q-th moment order for the Hurst exponent estimation.
     dx : int
@@ -295,9 +296,10 @@ def estimate_multiple_hurst_complexity(
         A DataFrame containing the estimated $H(q)$, $S_{P}$ and $C_{JS}$. The
         DataFrame includes the following columns:
             - "video": Video name.
-            - "t_range": The timestamp at which the O-information was
+            - "t_range": The timestamp at which the Hurst exponent was
             estimated.
-            - "size": The window size at which the O-information was estimated.
+            - "size": The window size at which the Hurst exponent was
+            estimated.
             - "permuted_id": The identifier for each distance ID.
             - "H": The estimated Hurst exponent.
             - "PE": The estimated permutation entropy.

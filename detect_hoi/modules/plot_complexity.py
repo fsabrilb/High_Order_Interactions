@@ -28,7 +28,7 @@ def plot_gliding_complexity(
     output_name: str = "plot_gliding"
 ):
     """
-    Plot the complexity metrics over many IDs.
+    Plot the complexity metrics over many IDs for one video.
 
     Parameters:
     -----------
@@ -36,9 +36,10 @@ def plot_gliding_complexity(
         A DataFrame containing the estimated $H(q)$, $S_{P}$ and $C_{JS}$. The
         DataFrame includes the following columns:
             - "video": Video name.
-            - "t_range": The timestamp at which the O-information was
+            - "t_range": The timestamp at which the Hurst exponent was
             estimated.
-            - "size": The window size at which the O-information was estimated.
+            - "size": The window size at which the Hurst exponent was
+            estimated.
             - "permuted_id": The identifier for each distance ID.
             - "H": The estimated Hurst exponent.
             - "PE": The estimated permutation entropy.
@@ -60,23 +61,15 @@ def plot_gliding_complexity(
     output_name : string
         Name of the output. Default value is "plot_gliding"
     """
-    dicc_id = {"2": 0, "3": 2, "4": 5}
-
     legend_labels = []
     legend_handles = []
-    fig, axes = plt.subplots(9, 6, figsize=(width, height))
+    fig, axes = plt.subplots(2, 3, figsize=(width, height))
     for video in df_complexity["video"].unique():
         particles = video[0]
-        males = video[3]
-        females = video[6]
-
         mask_1 = df_complexity["video"] == video
         for m in df_complexity[mask_1]["permuted_id"].unique():
             mask = mask_1 & (df_complexity["permuted_id"] == m)
-            title = males + "M" + females + "F - " + str(m)
-            label = dicc_id.get(particles, -1) + int(m)
-            if label == -1:
-                continue  # skip unrecognized multiplets
+            title = video + " - " + str(m)
 
             # Time series data
             df = df_complexity[mask]
@@ -92,14 +85,14 @@ def plot_gliding_complexity(
             for j, y in enumerate([Hd, Pd, Cd, Ho, Po, Co]):
                 if j == 2:
                     x = Pd
-                    xlabel = r"$S_{" + particles + r"}^{D}(t)$"
+                    xlabel = r"$PE_{" + particles + r"}^{D}(\omega)$"
                 elif j == 5:
                     x = Po
-                    xlabel = r"$S_{" + particles + r"}^{\theta}(t)$"
+                    xlabel = r"$PE_{" + particles + r"}^{\theta}(\omega)$"
                 else:
                     x = s
                     xlabel = "Window size ($\\omega$)"
-                axes[label][j].plot(
+                axes[j // 3][j % 3].plot(
                     x,
                     y,
                     label=title,
@@ -107,22 +100,22 @@ def plot_gliding_complexity(
                     ls="",
                     ms=4
                 )
-                legend_handles.append(axes[label][j].lines[-1])
+                legend_handles.append(axes[j // 3][j % 3].lines[-1])
                 legend_labels.append(title)
 
                 # Axes labels
-                axes[label][j].set_xlabel(xlabel, fontsize=14)
+                axes[j // 3][j % 3].set_xlabel(xlabel, fontsize=14)
 
-            axes[label][0].set_ylabel(r"$H_{" + particles + r"}^{D}(t)$", fontsize=14)  # noqa: 501
-            axes[label][1].set_ylabel(r"$S_{" + particles + r"}^{D}(t)$", fontsize=14)  # noqa: 501
-            axes[label][2].set_ylabel(r"$C_{" + particles + r"}^{D}(t)$", fontsize=14)  # noqa: 501
-            axes[label][3].set_ylabel(r"$H_{" + particles + r"}^{\theta}(t)$", fontsize=14)  # noqa: 501
-            axes[label][4].set_ylabel(r"$S_{" + particles + r"}^{\theta}(t)$", fontsize=14)  # noqa: 501
-            axes[label][5].set_ylabel(r"$C_{" + particles + r"}^{\theta}(t)$", fontsize=14)  # noqa: 501
+            axes[0][0].set_ylabel(r"$H_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
+            axes[0][1].set_ylabel(r"$PE_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
+            axes[0][2].set_ylabel(r"$C_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
+            axes[1][0].set_ylabel(r"$H_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
+            axes[1][1].set_ylabel(r"$PE_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
+            axes[1][2].set_ylabel(r"$C_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
 
     # Global plot settings
-    for i in range(9):
-        for j in range(6):
+    for i in range(2):
+        for j in range(3):
             axes[i][j].tick_params(
                 which="major",
                 direction="in",
@@ -140,15 +133,15 @@ def plot_gliding_complexity(
                 length=6
             )
             axes[i][j].xaxis.set_major_locator(mtick.MaxNLocator(n_x_breaks))
-            axes[i][j].xaxis.set_minor_locator(mtick.MaxNLocator(4 * n_x_breaks))  # noqa: 501
+            axes[i][j].xaxis.set_minor_locator(mtick.MaxNLocator(5 * n_x_breaks))  # noqa: 501
             axes[i][j].yaxis.set_major_locator(mtick.MaxNLocator(n_y_breaks))
             axes[i][j].yaxis.set_minor_locator(mtick.MaxNLocator(5 * n_y_breaks))  # noqa: 501
             axes[i][j].tick_params(axis="x", labelrotation=90)
 
     fig.legend(
-        legend_handles,
-        legend_labels,
-        ncol=2,
+        list(set(legend_handles)),
+        list(set(legend_labels)),
+        ncol=1,
         loc="center left",
         bbox_to_anchor=(1.001, 0.5),
         fontsize=12,
@@ -160,11 +153,11 @@ def plot_gliding_complexity(
     if save_figure:
         os.makedirs(output_path, exist_ok=True)
         full_path = os.path.join(output_path, f"{output_name}.png")
-        fig.savefig(full_path, dpi=300)
+        fig.savefig(full_path, dpi=400)
         print(f"Figure saved to {full_path}")
-    else:
-        plt.show()
-    return axes
+    plt.close()
+
+    return fig, axes
 
 
 # Plot complexity measures (Summary) ----
@@ -188,9 +181,10 @@ def plot_complexity_metrics_summary(
         A DataFrame containing the estimated $H(q)$, $S_{P}$ and $C_{JS}$. The
         DataFrame includes the following columns:
             - "video": Video name.
-            - "t_range": The timestamp at which the O-information was
+            - "t_range": The timestamp at which the Hurst exponent was
             estimated.
-            - "size": The window size at which the O-information was estimated.
+            - "size": The window size at which the Hurst exponent was
+            estimated.
             - "permuted_id": The identifier for each distance ID.
             - "H": The estimated Hurst exponent.
             - "PE": The estimated permutation entropy.
@@ -312,12 +306,12 @@ def plot_complexity_metrics_summary(
             # Axis labels
             for j in range(6):
                 axes_1[label][j].set_xlabel(xlabel, fontsize=14)
-            axes_1[label][0].set_ylabel(r"$H_{" + particles + r"}^{D}(t)$", fontsize=14)  # noqa: 501
-            axes_1[label][1].set_ylabel(r"$S_{" + particles + r"}^{D}(t)$", fontsize=14)  # noqa: 501
-            axes_1[label][2].set_ylabel(r"$C_{" + particles + r"}^{D}(t)$", fontsize=14)  # noqa: 501
-            axes_1[label][3].set_ylabel(r"$H_{" + particles + r"}^{\theta}(t)$", fontsize=14)  # noqa: 501
-            axes_1[label][4].set_ylabel(r"$S_{" + particles + r"}^{\theta}(t)$", fontsize=14)  # noqa: 501
-            axes_1[label][5].set_ylabel(r"$C_{" + particles + r"}^{\theta}(t)$", fontsize=14)  # noqa: 501
+            axes_1[label][0].set_ylabel(r"$H_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
+            axes_1[label][1].set_ylabel(r"$PE_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
+            axes_1[label][2].set_ylabel(r"$C_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
+            axes_1[label][3].set_ylabel(r"$H_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
+            axes_1[label][4].set_ylabel(r"$PE_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
+            axes_1[label][5].set_ylabel(r"$C_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
 
     # Figure 2 - Sex ratio
     legend_labels_2 = []
@@ -383,10 +377,10 @@ def plot_complexity_metrics_summary(
             for j in range(6):
                 axes_2[label][j].set_xlabel(xlabel, fontsize=14)
             axes_2[label][0].set_ylabel(r"$H_{" + particles + r"}^{D}(t)$", fontsize=14)  # noqa: 501
-            axes_2[label][1].set_ylabel(r"$S_{" + particles + r"}^{D}(t)$", fontsize=14)  # noqa: 501
+            axes_2[label][1].set_ylabel(r"$PE_{" + particles + r"}^{D}(t)$", fontsize=14)  # noqa: 501
             axes_2[label][2].set_ylabel(r"$C_{" + particles + r"}^{D}(t)$", fontsize=14)  # noqa: 501
             axes_2[label][3].set_ylabel(r"$H_{" + particles + r"}^{\theta}(t)$", fontsize=14)  # noqa: 501
-            axes_2[label][4].set_ylabel(r"$S_{" + particles + r"}^{\theta}(t)$", fontsize=14)  # noqa: 501
+            axes_2[label][4].set_ylabel(r"$PE_{" + particles + r"}^{\theta}(t)$", fontsize=14)  # noqa: 501
             axes_2[label][5].set_ylabel(r"$C_{" + particles + r"}^{\theta}(t)$", fontsize=14)  # noqa: 501
 
     # Styling
@@ -410,15 +404,15 @@ def plot_complexity_metrics_summary(
                     length=6
                 )
                 ax[i][j].xaxis.set_major_locator(mtick.MaxNLocator(n_x_breaks))
-                ax[i][j].xaxis.set_minor_locator(mtick.MaxNLocator(4 * n_x_breaks))  # noqa: 501
+                ax[i][j].xaxis.set_minor_locator(mtick.MaxNLocator(5 * n_x_breaks))  # noqa: 501
                 ax[i][j].yaxis.set_major_locator(mtick.MaxNLocator(n_y_breaks))
                 ax[i][j].yaxis.set_minor_locator(mtick.MaxNLocator(5 * n_y_breaks))  # noqa: 501
                 ax[i][j].tick_params(axis="x", labelrotation=90)
 
     fig_1.legend(
-        legend_handles_1,
-        legend_labels_1,
-        ncol=5,
+        list(set(legend_handles_1)),
+        list(set(legend_labels_1)),
+        ncol=1,
         loc="center left",
         bbox_to_anchor=(1.001, 0.5),
         fontsize=12,
@@ -428,9 +422,9 @@ def plot_complexity_metrics_summary(
     fig_1.tight_layout(rect=[0, 0, 0.99, 1])  # reserve space for legend
 
     fig_2.legend(
-        legend_handles_2,
-        legend_labels_2,
-        ncol=5,
+        list(set(legend_handles_2)),
+        list(set(legend_labels_2)),
+        ncol=1,
         loc="center left",
         bbox_to_anchor=(1.001, 0.5),
         fontsize=12,
@@ -443,9 +437,10 @@ def plot_complexity_metrics_summary(
         os.makedirs(output_path, exist_ok=True)
         full_path_1 = os.path.join(output_path, f"{output_name}_video.png")
         full_path_2 = os.path.join(output_path, f"{output_name}_sexratio.png")
-        fig_1.savefig(full_path_1, dpi=300)
-        fig_2.savefig(full_path_2, dpi=300)
+        fig_1.savefig(full_path_1, dpi=400)
+        fig_2.savefig(full_path_2, dpi=400)
         print(f"Figure saved to {full_path_1} and {full_path_2}")
-    else:
-        plt.show()
-    return df, axes_1, axes_2
+    plt.close()
+    plt.close()
+
+    return df, fig_1, fig_2, axes_1, axes_2

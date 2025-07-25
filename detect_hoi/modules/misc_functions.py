@@ -61,13 +61,13 @@ def parallel_run(
     return m
 
 
-# Estimate distance between two positions time series ----
-def estimate_distances(
+# Estimate elementary symmetric polynomials (ESP) ----
+def estimate_esp(
     df: pd.DataFrame,
     filter_step: int = None
 ) -> pd.DataFrame:
-    """Estimate distances between the time series of two individuals. The data
-    has the following columns:
+    """Estimate elementary symmetric polynomials (ESP) between the time series
+    of the individuals. The data has the following columns:
         - id: Particle ID
         - permuted_id: Particle ID after smoothing process
         - time: Times (Frames)
@@ -108,39 +108,91 @@ def estimate_distances(
     Returns:
     ---------------------------------------------------------------------------
     df_final : pd.DataFrame
-        Dataframe with the distances between two different IDs with the
+        Dataframe with the ESP between the different IDs with the
         following columns:
             - time: Times (frames)
-            - id_pair: Pair of IDs coupled for the distance estimation
-            - distance: Euclidean distance between the pair of IDs
+            - order: Order of the elementary symmetric polynomial
+            - n_x: Component in X-axis for the estimated ESP
+            - n_y: Component in Y-axis for the estimated ESP
+            - corrected_orientation: Orientation of the individuals
     """
+    ids = df["permuted_id"].unique()
+    print("Estimate elementary symmetric polynomials for:", len(ids), "ids")
 
-    df_final = []
-    print("Estimate distances for:", len(df["permuted_id"].unique()), "ids")
-    for id_1 in sorted(df["permuted_id"].unique()):
-        for id_2 in sorted(df["permuted_id"].unique()):
-            if id_1 < id_2:
-                id_pair = str(id_1) + str(id_2)
-                print("- Pair: {}".format(id_pair))
-                time = df[df["permuted_id"] == id_1]["time"].values
-                x1 = df[df["permuted_id"] == id_1]["n_x"].values
-                x2 = df[df["permuted_id"] == id_2]["n_x"].values
-                y1 = df[df["permuted_id"] == id_1]["n_y"].values
-                y2 = df[df["permuted_id"] == id_2]["n_y"].values
-                distance = np.sqrt(np.power(x2 - x1, 2) + np.power(y2 - y1, 2))
-                df_final.append(
-                    pd.DataFrame({
-                        "time": time,
-                        "id_pair": [id_pair]*len(time),
-                        "distance": distance
-                    })
-                )
-    df_final = pd.concat(df_final, ignore_index=True)
+    time = df[df["permuted_id"] == 0]["time"].values
+    x1 = df[df["permuted_id"] == 0]["n_x"].values + 0.5
+    y1 = df[df["permuted_id"] == 0]["n_y"].values + 0.5
+    o1 = df[df["permuted_id"] == 0]["corrected_orientation"].values
+    x2 = df[df["permuted_id"] == 1]["n_x"].values + 0.5
+    y2 = df[df["permuted_id"] == 1]["n_y"].values + 0.5
+    o2 = df[df["permuted_id"] == 1]["corrected_orientation"].values
+
+    # For 2 individuals
+    if len(ids) == 2:
+        # Component definition
+        e1x = x1 + x2
+        e1y = y1 + y2
+        e2x = x1 * x2
+        e2y = y1 * y2
+
+        # Append data
+        df_final = pd.concat([
+            pd.DataFrame({"time": time, "order": [0]*len(time), "n_x": e1x, "n_y": e1y, "corrected_orientation": o1}),  # noqa: 501
+            pd.DataFrame({"time": time, "order": [1]*len(time), "n_x": e2x, "n_y": e2y, "corrected_orientation": o2})  # noqa: 501
+        ])
+
+    # For 3 individuals
+    elif len(ids) == 3:
+        x3 = df[df["permuted_id"] == 2]["n_x"].values + 0.5
+        y3 = df[df["permuted_id"] == 2]["n_y"].values + 0.5
+        o3 = df[df["permuted_id"] == 2]["corrected_orientation"].values
+
+        # Component definition
+        e1x = x1 + x2 + x3
+        e1y = y1 + y2 + y3
+        e2x = x1 * x2 + x1 * x3 + x2 * x3
+        e2y = y1 * y2 + y1 * y3 + y2 * y3
+        e3x = x1 * x2 * x3
+        e3y = y1 * y2 * y3
+
+        # Append data
+        df_final = pd.concat([
+            pd.DataFrame({"time": time, "order": [0]*len(time), "n_x": e1x, "n_y": e1y, "corrected_orientation": o1}),  # noqa: 501
+            pd.DataFrame({"time": time, "order": [1]*len(time), "n_x": e2x, "n_y": e2y, "corrected_orientation": o2}),  # noqa: 501
+            pd.DataFrame({"time": time, "order": [2]*len(time), "n_x": e3x, "n_y": e3y, "corrected_orientation": o3})  # noqa: 501
+        ])
+
+    # For 4 individuals
+    else:
+        x3 = df[df["permuted_id"] == 2]["n_x"].values + 0.5
+        y3 = df[df["permuted_id"] == 2]["n_y"].values + 0.5
+        o3 = df[df["permuted_id"] == 2]["corrected_orientation"].values
+        x4 = df[df["permuted_id"] == 3]["n_x"].values + 0.5
+        y4 = df[df["permuted_id"] == 3]["n_y"].values + 0.5
+        o4 = df[df["permuted_id"] == 3]["corrected_orientation"].values
+
+        # Component definition
+        e1x = x1 + x2 + x3 + x4
+        e1y = y1 + y2 + y3 + y4
+        e2x = x1 * x2 + x1 * x3 + x1 * x4 + x2 * x3 + x2 * x4 + x3 * x4
+        e2y = y1 * y2 + y1 * y3 + y1 * y4 + y2 * y3 + y2 * y4 + y3 * y4
+        e3x = x1 * x2 * x3 + x1 * x2 * x4 + x2 * x3 * x4
+        e3y = y1 * y2 * y3 + y1 * y2 * y4 + y2 * y3 * y4
+        e4x = x1 * x2 * x3 * x4
+        e4y = y1 * y2 * y3 * y4
+
+        # Append data
+        df_final = pd.concat([
+            pd.DataFrame({"time": time, "order": [0]*len(time), "n_x": e1x, "n_y": e1y, "corrected_orientation": o1}),  # noqa: 501
+            pd.DataFrame({"time": time, "order": [1]*len(time), "n_x": e2x, "n_y": e2y, "corrected_orientation": o2}),  # noqa: 501
+            pd.DataFrame({"time": time, "order": [2]*len(time), "n_x": e3x, "n_y": e3y, "corrected_orientation": o3}),  # noqa: 501
+            pd.DataFrame({"time": time, "order": [3]*len(time), "n_x": e4x, "n_y": e4y, "corrected_orientation": o4})  # noqa: 501
+        ])
 
     if filter_step is not None:
         df_final = df_final[df_final["time"] % filter_step == 0]
         print("-- Skipped data every {} points".format(filter_step))
-    print("")
+
     return df_final
 
 
