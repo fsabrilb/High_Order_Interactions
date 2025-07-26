@@ -39,12 +39,25 @@ Finally, a Tkinter-based application for visualizing cockroach tracking data is 
 - Keyboard shortcuts for efficiency.
 
 ### Keyboard Shortcuts
-| Shortcut              | Function              |
-|-----------------------|-----------------------|
-| `<Shift>`             | Enable Edit Positions |
-| `R`                   | Rotate last edited ID |
-| `T`                   | Move next frame       |
-| `E`                   | Move previous frame   |
+| Shortcut                 | Function                  |
+|--------------------------|---------------------------|
+| `<Shift>`                | Enable Edit Positions     |
+| `Q`                      | Rotate anticlockwise ID 0 |
+| `W`                      | Rotate anticlockwise ID 1 |
+| `E`                      | Rotate anticlockwise ID 2 |
+| `R`                      | Rotate clockwise ID 3     |
+| `A`                      | Rotate clockwise ID 0     |
+| `S`                      | Rotate clockwise ID 1     |
+| `D`                      | Rotate clockwise ID 2     |
+| `F`                      | Rotate clockwise ID 3     |
+| `<Right>`                | Move next frame           |
+| `<Left>`                 | Move previous frame       |
+| `X`                      | Swap ID 0-1               |
+| `C`                      | Swap ID 0-2               |
+| `V`                      | Swap ID 0-3               |
+| `B`                      | Swap ID 1-2               |
+| `N`                      | Swap ID 1-3               |
+| `M`                      | Swap ID 2-3               |
 
 ### Installation & Usage
 1. Ensure you have Python installed (version 3.x recommended).

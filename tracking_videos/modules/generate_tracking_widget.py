@@ -211,6 +211,10 @@ class CSVPlotterApp:
         self.root.bind("w", lambda event: self.rotate_id(1))  # Rotate ID 1 (W)
         self.root.bind("e", lambda event: self.rotate_id(2))  # Rotate ID 2 (E)
         self.root.bind("r", lambda event: self.rotate_id(3))  # Rotate ID 3 (R)
+        self.root.bind("a", lambda event: self.rotate_id_m(0))  # -Rot ID 0 (A)
+        self.root.bind("s", lambda event: self.rotate_id_m(1))  # -Rot ID 1 (S)
+        self.root.bind("d", lambda event: self.rotate_id_m(2))  # -Rot ID 2 (D)
+        self.root.bind("f", lambda event: self.rotate_id_m(3))  # -Rot ID 3 (F)
         self.root.bind("<Left>", self.prev_frame)  # Previous Frame (E)
         self.root.bind("<Right>", self.next_frame)  # Next Frame (T)
         self.root.bind("x", lambda event: self.swap_ids(0, 1))  # Swap 0-1 (X)
@@ -548,9 +552,13 @@ class CSVPlotterApp:
         if not self.edit_mode or self.selected_id is None or event.xdata is None or event.ydata is None:  # noqa: 501
             return
 
+        delta_t = 0
         mask = (
             (self.data["id"] == self.selected_id) &
-            (self.data["time"] == self.current_time)
+            (self.data["time"].between(
+                self.current_time,
+                self.current_time + delta_t
+            ))
         )
         self.data.loc[
             mask,
@@ -589,6 +597,36 @@ class CSVPlotterApp:
                 )
                 theta = np.pi / 18  # Rotate by 10°
                 self.data.loc[mask, "orientation"] += theta  # noqa: 501
+                self.data["orientation"] = self.data["orientation"].apply(mod_pi_shifted)  # noqa: 501
+
+                self.update_plot()
+
+    def rotate_id_m(self, cockroach_id):
+        """Changes the orientation of the selected ID."""
+        # Auxiliary function for angles
+        def mod_pi_shifted(x):
+            """
+            Computes x modulo pi, considering a phase shift of -pi/2.
+
+            Parameters:
+            x : float or array-like
+                Input value(s) in radians.
+
+            Returns:
+            float or array-like
+                The modulo result mapped within the range [-pi/2, 3 * pi/2].
+            """
+            return (x + np.pi/2) % (2 * np.pi) - np.pi/2
+
+        if self.edit_mode and self.data is not None:
+            # Ensure the rotation meets the constraints
+            if cockroach_id in self.data["id"].unique():
+                mask = (
+                    (self.data["id"] == cockroach_id) &
+                    (self.data["time"] >= self.current_time)
+                )
+                theta = np.pi / 18  # Rotate by 10°
+                self.data.loc[mask, "orientation"] -= theta  # noqa: 501
                 self.data["orientation"] = self.data["orientation"].apply(mod_pi_shifted)  # noqa: 501
 
                 self.update_plot()

@@ -152,7 +152,7 @@ def plot_crqa(
     if save_figures:
         os.makedirs(output_path, exist_ok=True)
         full_path = os.path.join(output_path, f"{output_name}.png")
-        fig.savefig(full_path, dpi=400)
+        fig.savefig(full_path, dpi=400, bbox_inches="tight")
         print(f"Figure saved to {full_path}")
     plt.close()
 
@@ -271,7 +271,7 @@ def plot_kuramoto_order_parameter(
     if save_figures:
         os.makedirs(output_path, exist_ok=True)
         full_path = os.path.join(output_path, f"{output_name}.png")
-        fig.savefig(full_path, dpi=400)
+        fig.savefig(full_path, dpi=400, bbox_inches="tight")
         print(f"Figure saved to {full_path}")
     plt.close()
 

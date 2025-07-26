@@ -15,6 +15,71 @@ import matplotlib.ticker as mtick  # type: ignore
 import matplotlib.colors as mcolors  # type: ignore
 
 
+# Summarize metrics ----
+def summarize_metrics(df_complexity: pd.DataFrame) -> list:
+    """
+    Summarize the complexity metrics over many multiplets.
+
+    Parameters:
+    -----------
+    df_complexity : pd.DataFrame
+        A DataFrame containing the estimated $H(q)$, $S_{P}$ and $C_{JS}$. The
+        DataFrame includes the following columns:
+            - "video": Video name.
+            - "t_range": The timestamp at which the Hurst exponent was
+            estimated.
+            - "size": The window size at which the Hurst exponent was
+            estimated.
+            - "permuted_id": The identifier for each distance ID.
+            - "H": The estimated Hurst exponent.
+            - "PE": The estimated permutation entropy.
+            - "C": The estimated statistical complexity.
+    """
+    # Generate group variables
+    df = df_complexity.copy()
+    df["particles"] = df["video"].str[0]
+    df["sex_ratio"] = df["video"].str[0:8]
+
+    # Groups
+    g1 = ["video", "permuted_id", "size"]
+    g2 = ["sex_ratio", "permuted_id", "size"]
+    vars_1, vars_2 = [], []
+
+    # Complexity - Metrics
+    metrics = [
+        "H_distance", "PE_distance", "C_distance",
+        "H_orientation", "PE_orientation", "C_orientation"
+    ]
+
+    for col in metrics:
+        for i, g in enumerate([g1, g2], start=1):
+            c = col + "_count_" + str(i)
+            m = col + "_mean_" + str(i)
+            s = col + "_std_" + str(i)
+            df[c] = df.groupby(g)[col].transform("count")
+            df[m] = df.groupby(g)[col].transform("mean")
+            df[s] = df.groupby(g)[col].transform("std") / np.sqrt(df[c])
+            if i == 1:
+                vars_1.append(c)
+                vars_1.append(m)
+                vars_1.append(s)
+            else:
+                vars_2.append(c)
+                vars_2.append(m)
+                vars_2.append(s)
+
+    g1 += vars_1
+    g2 += vars_2
+
+    k1 = df[g1].drop_duplicates()
+    k1["label_key"] = k1["video"] + "_" + k1["permuted_id"].astype(str)
+
+    k2 = df[g2].drop_duplicates()
+    k2["label_key"] = k2["sex_ratio"] + "_" + k2["permuted_id"].astype(str)
+
+    return k1.sort_values(g1), k2.sort_values(g2)
+
+
 # Plot complexity measures ----
 def plot_gliding_complexity(
     df_complexity,
@@ -45,9 +110,9 @@ def plot_gliding_complexity(
             - "PE": The estimated permutation entropy.
             - "C": The estimated statistical complexity.
     width : int
-        Width of final plot. Default value 10
+        Width of final plot. Default value 30
     height : int
-        Width of final plot. Default value 10
+        Width of final plot. Default value 36
     n_x_breaks : int
         Number of divisions in x-axis. Default value 20
     n_y_breaks : int
@@ -63,11 +128,15 @@ def plot_gliding_complexity(
     """
     legend_labels = []
     legend_handles = []
+    dicc_colors = {"2": "plasma", "3": "cool", "4": "copper"}
     fig, axes = plt.subplots(2, 3, figsize=(width, height))
     for video in df_complexity["video"].unique():
         particles = video[0]
         mask_1 = df_complexity["video"] == video
-        for m in df_complexity[mask_1]["permuted_id"].unique():
+        mt = df_complexity[mask_1]["permuted_id"].unique()
+        map = cm.get_cmap(dicc_colors[particles], len(mt))
+        colors = {key: mcolors.to_hex(map(i)) for i, key in enumerate(mt)}
+        for m in mt:
             mask = mask_1 & (df_complexity["permuted_id"] == m)
             title = video + " - " + str(m)
 
@@ -97,6 +166,7 @@ def plot_gliding_complexity(
                     y,
                     label=title,
                     marker="o",
+                    color=colors[m],
                     ls="",
                     ms=4
                 )
@@ -153,7 +223,7 @@ def plot_gliding_complexity(
     if save_figure:
         os.makedirs(output_path, exist_ok=True)
         full_path = os.path.join(output_path, f"{output_name}.png")
-        fig.savefig(full_path, dpi=400)
+        fig.savefig(full_path, dpi=400, bbox_inches="tight")
         print(f"Figure saved to {full_path}")
     plt.close()
 
@@ -190,7 +260,7 @@ def plot_complexity_metrics_summary(
             - "PE": The estimated permutation entropy.
             - "C": The estimated statistical complexity.
     width : int
-        Width of final plot. Default value 10
+        Width of final plot. Default value 24
     height : int
         Width of final plot. Default value 10
     n_x_breaks : int
@@ -198,7 +268,7 @@ def plot_complexity_metrics_summary(
     n_y_breaks : int
         Number of divisions in y-axis. Default value 20
     fancy_legend : bool
-        Fancy legend output (default value False)
+        Fancy legend output (default value True)
     save_figures: bool
         Save plots flag (default value False)
     output_path : string
@@ -206,57 +276,37 @@ def plot_complexity_metrics_summary(
     output_name : string
         Name of the outputs. Default value is "plot_gliding_summary"
     """
-
-    df = df_complexity.copy()
-    df["particles"] = df["video"].str[0]
-    df["sex_ratio"] = df["video"].str[0:8]
-
-    complexity_metrics = [
-        "H_distance", "PE_distance", "C_distance",
-        "H_orientation", "PE_orientation", "C_orientation"
-    ]
-
-    g1 = ["video", "permuted_id", "size"]
-    g2 = ["sex_ratio", "permuted_id", "size"]
-    for col in complexity_metrics:
-        for i, g in enumerate([g1, g2], start=1):
-            c = col + "_count_" + str(i)
-            m = col + "_mean_" + str(i)
-            s = col + "_std_" + str(i)
-            df[c] = df.groupby(g)[col].transform("count")
-            df[m] = df.groupby(g)[col].transform("mean")
-            df[s] = df.groupby(g)[col].transform("std") / np.sqrt(df[c])
+    k1, k2 = summarize_metrics(df_complexity=df_complexity)
 
     # Unique keys and combinations and color mapping
-    k1 = df[["video", "permuted_id"]].drop_duplicates()
-    k1["label_key"] = k1["video"] + "_" + k1["permuted_id"].astype(str)
-    map_1 = cm.get_cmap("plasma", len(k1))
-    label_color_1 = {
-        key: mcolors.to_hex(map_1(i)) for i, key in enumerate(k1["label_key"])
-    }
+    m1 = k1["label_key"].unique()
+    map_1 = cm.get_cmap("plasma", len(m1))
+    label_color_1 = {key: mcolors.to_hex(map_1(i)) for i, key in enumerate(m1)}
 
-    k2 = df[["sex_ratio", "permuted_id"]].drop_duplicates()
-    k2["label_key"] = k2["sex_ratio"] + "_" + k2["permuted_id"].astype(str)
-    map_2 = cm.get_cmap("plasma", len(k2))
-    label_color_2 = {
-        key: mcolors.to_hex(map_2(i)) for i, key in enumerate(k2["label_key"])
-    }
+    m2 = k2["label_key"].unique()
+    map_2 = cm.get_cmap("plasma", len(m2))
+    label_color_2 = {key: mcolors.to_hex(map_2(i)) for i, key in enumerate(m2)}
 
     # Figure 1 - Video
     legend_labels_1 = []
     legend_handles_1 = []
     fig_1, axes_1 = plt.subplots(3, 6, figsize=(width, height))
-    used_labels = [[set() for _ in range(6)] for _ in range(3)]  # Avoid duplic
 
-    for group in df["video"].unique():
+    # Complexity - Metrics
+    complexity_metrics = [
+        "H_distance", "PE_distance", "C_distance",
+        "H_orientation", "PE_orientation", "C_orientation"
+    ]
+
+    for group in sorted(k1["video"].unique()):
         particles = group[0]
         males = group[3]
         females = group[6]
-        mask_1 = df["video"] == group
-        for m in df[mask_1]["permuted_id"].unique():
+        mask_1 = k1["video"] == group
+        for m in k1[mask_1]["permuted_id"].unique():
             label_key = group + "_" + str(m)
             color = label_color_1[label_key]
-            mask = mask_1 & (df["permuted_id"] == m)
+            mask = mask_1 & (k1["permuted_id"] == m)
             title = group + " - " + str(m)
             label = int(particles) - 2 if int(particles) >= 2 else -1
             if label == -1:
@@ -265,11 +315,10 @@ def plot_complexity_metrics_summary(
             for j, col in enumerate(complexity_metrics):
                 m_mean = col + "_mean_1"
                 m_std = col + "_std_1"
-                df_aux = df[mask].drop_duplicates(subset=g1)
+                df_aux = k1[mask]
                 size = df_aux["size"].values
                 ym = df_aux[m_mean].values
                 ys = df_aux[m_std].values
-                show_label = title not in used_labels[label][j]
 
                 if j == 2:
                     x = df_aux["PE_distance_mean_1"].values
@@ -290,7 +339,7 @@ def plot_complexity_metrics_summary(
                     ym,
                     xerr=xs,
                     yerr=ys,
-                    label=title if show_label else None,
+                    label=title,
                     capsize=5,
                     ls="--",
                     lw=0.7,
@@ -299,9 +348,6 @@ def plot_complexity_metrics_summary(
                 )
                 legend_handles_1.append(axes_1[label][j].lines[-1])
                 legend_labels_1.append(title)
-
-                if show_label:
-                    used_labels[label][j].add(title)
 
             # Axis labels
             for j in range(6):
@@ -317,16 +363,16 @@ def plot_complexity_metrics_summary(
     legend_labels_2 = []
     legend_handles_2 = []
     fig_2, axes_2 = plt.subplots(3, 6, figsize=(width, height))
-    used_labels = [[set() for _ in range(6)] for _ in range(3)]  # Avoid duplic
-    for group in df["sex_ratio"].unique():
+
+    for group in sorted(k2["sex_ratio"].unique()):
         particles = group[0]
         males = group[3]
         females = group[6]
-        mask_1 = df["sex_ratio"] == group
-        for m in df[mask_1]["permuted_id"].unique():
+        mask_1 = k2["sex_ratio"] == group
+        for m in k2[mask_1]["permuted_id"].unique():
             label_key = group + "_" + str(m)
             color = label_color_2[label_key]
-            mask = mask_1 & (df["permuted_id"] == m)
+            mask = mask_1 & (k2["permuted_id"] == m)
             title = males + "M" + females + "F - " + str(m)
             label = int(particles) - 2 if int(particles) >= 2 else -1
             if label == -1:
@@ -335,11 +381,10 @@ def plot_complexity_metrics_summary(
             for j, col in enumerate(complexity_metrics):
                 m_mean = col + "_mean_2"
                 m_std = col + "_std_2"
-                df_aux = df[mask].drop_duplicates(subset=g2)
+                df_aux = k2[mask]
                 size = df_aux["size"].values
                 ym = df_aux[m_mean].values
                 ys = df_aux[m_std].values
-                show_label = title not in used_labels[label][j]
 
                 if j == 2:
                     x = df_aux["PE_distance_mean_2"].values
@@ -360,7 +405,7 @@ def plot_complexity_metrics_summary(
                     ym,
                     xerr=xs,
                     yerr=ys,
-                    label=title if show_label else None,
+                    label=title,
                     capsize=5,
                     ls="--",
                     lw=0.7,
@@ -369,9 +414,6 @@ def plot_complexity_metrics_summary(
                 )
                 legend_handles_2.append(axes_2[label][j].lines[-1])
                 legend_labels_2.append(title)
-
-                if show_label:
-                    used_labels[label][j].add(title)
 
             # Axis labels
             for j in range(6):
@@ -437,10 +479,10 @@ def plot_complexity_metrics_summary(
         os.makedirs(output_path, exist_ok=True)
         full_path_1 = os.path.join(output_path, f"{output_name}_video.png")
         full_path_2 = os.path.join(output_path, f"{output_name}_sexratio.png")
-        fig_1.savefig(full_path_1, dpi=400)
-        fig_2.savefig(full_path_2, dpi=400)
+        fig_1.savefig(full_path_1, dpi=400, bbox_inches="tight")
+        fig_2.savefig(full_path_2, dpi=400, bbox_inches="tight")
         print(f"Figure saved to {full_path_1} and {full_path_2}")
     plt.close()
     plt.close()
 
-    return df, fig_1, fig_2, axes_1, axes_2
+    return k1, k2, fig_1, fig_2, axes_1, axes_2
