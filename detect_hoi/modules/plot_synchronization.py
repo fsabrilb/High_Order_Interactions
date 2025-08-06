@@ -276,3 +276,128 @@ def plot_kuramoto_order_parameter(
     plt.close()
 
     return fig, axes
+
+
+# Plot Kuramoto order parameter ----
+def plot_kuramoto_order_parameter_2(
+    df_synchronization: pd.DataFrame,
+    width: int = 24,
+    height: int = 10,
+    n_y_breaks: int = 20,
+    save_figures: bool = False,
+    output_path: str = "../output_files",
+    output_name: str = "plot_gliding_summary"
+):
+    """
+    Plot the order parameter from the Kuramoto model over different videos as a
+    boxplots.
+
+    Parameters:
+    -----------
+    df_synchronization : pd.DataFrame
+        A DataFrame containing the estimated Kuramoto parameter. The DataFrame
+        includes the following columns:
+            - "video": Video name.
+            - "time": The timestamp at which the Kuramoto parameter was
+            estimated.
+            - "order_parameter": The estimated Kuramoto paramter.
+    width : int
+        Width of final plot. Default value 10
+    height : int
+        Width of final plot. Default value 10
+    n_y_breaks : int
+        Number of divisions in y-axis. Default value 20
+    save_figures: bool
+        Save plots flag (default value False)
+    output_path : string
+        Local path for outputs. Default value is "../output_files"
+    output_name : string
+        Name of the outputs. Default value is "plot_gliding_summary"
+    """
+    df = df_synchronization.copy()
+    df["particles"] = df["video"].str[0]
+    df["sex_ratio"] = df["video"].str[0:8]
+    df["sex_ratio"] = df["sex_ratio"].str.replace("_", " ").str.capitalize()
+
+    fig, axes = plt.subplots(1, 1, figsize=(width, height))
+    sex_ratios = sorted(df["sex_ratio"].unique())
+
+    # Plot options and data
+    k = "order_parameter"
+    v = [df[df["sex_ratio"] == sr][k].dropna().values for sr in sex_ratios]
+
+    # Quantiles - Quintiles
+    q1, q2, q3, q4, q5 = [], [], [], [], []
+    for i in range(len(v)):
+        q1_, q2_, q3_, q4_, q5_ = np.percentile(v[i], [0, 25, 50, 75, 100])
+        q1.append(q1_)
+        q2.append(q2_)
+        q3.append(q3_)
+        q4.append(q4_)
+        q5.append(q5_)
+
+    vp = axes.violinplot(
+        v,
+        showmeans=False,
+        showmedians=False,
+        showextrema=False,
+        widths=0.5
+    )
+    indexes = np.arange(1, len(sex_ratios) + 1)
+    axes.scatter(
+        indexes,
+        q3,
+        marker="*",
+        color="white",
+        s=120,
+        zorder=3,
+        facecolors="#B0B0B0",
+        edgecolor="#000000"
+    )
+    axes.vlines(indexes, q1, q5, color="k", linestyle="-", lw=1)
+    axes.vlines(indexes, q2, q4, color="k", linestyle="-", lw=5)
+
+    # Labels and ticks
+    axes.set_xticks(indexes)
+    axes.set_xticklabels(sex_ratios, rotation=90, ha="right")
+    axes.set_xlabel("Sex Ratio")
+    axes.yaxis.set_major_locator(mtick.MaxNLocator(n_y_breaks))
+    axes.yaxis.set_minor_locator(mtick.MaxNLocator(5 * n_y_breaks))
+    axes.set_ylabel("$\\Psi_{{N}}^{{\\theta}}(t)$", fontsize=14)
+    axes.tick_params(
+        which="major",
+        direction="in",
+        top=True,
+        right=True,
+        labelsize=11,
+        length=12
+    )
+    axes.tick_params(
+        which="minor",
+        direction="in",
+        top=True,
+        right=True,
+        labelsize=11,
+        length=6
+    )
+
+    # Violin options
+    for body in vp["bodies"]:
+        body.set_facecolor("#151097")
+        body.set_edgecolor("#000000")
+        body.set_alpha(1)
+
+        # Get the center and modify the paths to not go further right
+        m = np.mean(body.get_paths()[0].vertices[:, 0])
+        body.get_paths()[0].vertices[:, 0] = np.clip(body.get_paths()[0].vertices[:, 0], -np.inf, m)  # noqa: 501
+
+    fig.tight_layout()  # reserve space for legend
+
+    if save_figures:
+        os.makedirs(output_path, exist_ok=True)
+        full_path = os.path.join(output_path, f"{output_name}.png")
+        fig.savefig(full_path, dpi=400, bbox_inches="tight")
+        print(f"Figure saved to {full_path}")
+    plt.close()
+
+    return fig, axes

@@ -291,16 +291,16 @@ def plot_hoi_metrics_summary(
     map_2 = cm.get_cmap("plasma", len(m2))
     label_color_2 = {key: mcolors.to_hex(map_2(i)) for i, key in enumerate(m2)}
 
+    # HoI - Metrics
+    hoi_metrics = [
+        "oinfo_distance", "oinfo_orientation"  # ,
+        # "sinfo_distance", "sinfo_orientation"
+    ]
+
     # Figure 1 - Video
     legend_labels_1 = []
     legend_handles_1 = []
-    fig_1, axes_1 = plt.subplots(2, 4, figsize=(width, height))
-
-    # HoI - Metrics
-    hoi_metrics = [
-        "oinfo_distance", "oinfo_orientation",
-        "sinfo_distance", "sinfo_orientation"
-    ]
+    fig_1, axes_1 = plt.subplots(2, len(hoi_metrics), figsize=(width, height))
 
     for group in sorted(k1["video"].unique()):
         particles = group[0]
@@ -350,20 +350,20 @@ def plot_hoi_metrics_summary(
                 legend_labels_1.append(title)
 
             # Axis labels
-            for j in range(4):
+            for j in range(len(hoi_metrics)):
                 axes_1[label][j].set_xlabel(
                     "Window size ($\\omega$)",
                     fontsize=14
                 )
             axes_1[label][0].set_ylabel(r"$\Omega_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
             axes_1[label][1].set_ylabel(r"$\Omega_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
-            axes_1[label][2].set_ylabel(r"$S_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
-            axes_1[label][3].set_ylabel(r"$S_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
+            # axes_1[label][2].set_ylabel(r"$S_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
+            # axes_1[label][3].set_ylabel(r"$S_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
 
     # Figure 2 - Sex ratio
     legend_labels_2 = []
     legend_handles_2 = []
-    fig_2, axes_2 = plt.subplots(2, 4, figsize=(width, height))
+    fig_2, axes_2 = plt.subplots(2, len(hoi_metrics), figsize=(width, height))
 
     for group in sorted(k2["sex_ratio"].unique()):
         particles = group[0]
@@ -414,19 +414,19 @@ def plot_hoi_metrics_summary(
                 legend_labels_2.append(title)
 
             # Axis labels
-            for j in range(4):
+            for j in range(len(hoi_metrics)):
                 axes_2[label][j].set_xlabel(
                     "Window size ($\\omega$)",
                     fontsize=14
                 )
             axes_2[label][0].set_ylabel(r"$\Omega_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
             axes_2[label][1].set_ylabel(r"$\Omega_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
-            axes_2[label][2].set_ylabel(r"$S_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
-            axes_2[label][3].set_ylabel(r"$S_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
+            # axes_2[label][2].set_ylabel(r"$S_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
+            # axes_2[label][3].set_ylabel(r"$S_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
 
     # Styling
     for i in range(2):
-        for j in range(4):
+        for j in range(len(hoi_metrics)):
             for ax in [axes_1, axes_2]:
                 ax[i][j].tick_params(
                     which="major",
