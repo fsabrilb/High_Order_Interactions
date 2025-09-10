@@ -110,8 +110,7 @@ def plot_gliding_complex_network(
     output_name : string
         Name of the output. Default value is "plot_gliding"
     """
-    legend_labels = []
-    legend_handles = []
+    legend_entries = {}
     dicc_colors = {"2": "plasma", "3": "cool", "4": "copper"}
     fig, axes = plt.subplots(2, 4, figsize=(width, height))
     for video in df_network_all["video"].unique():
@@ -147,7 +146,7 @@ def plot_gliding_complex_network(
                 x = s
                 xlabel = "Window size ($\\omega$)"
                 ylabel = cols[j] + " ($N=" + particles + "$)"
-                axes[j // 4][j % 4].plot(
+                line = axes[j // 4][j % 4].plot(
                     x,
                     y,
                     label=title,
@@ -155,9 +154,8 @@ def plot_gliding_complex_network(
                     color=colors[m],
                     ls="",
                     ms=4
-                )
-                legend_handles.append(axes[j // 4][j % 4].lines[-1])
-                legend_labels.append(title)
+                )[0]
+                legend_entries[title] = line
 
                 # Axes labels
                 axes[j // 4][j % 4].set_xlabel(xlabel, fontsize=14)
@@ -189,16 +187,16 @@ def plot_gliding_complex_network(
             axes[i][j].tick_params(axis="x", labelrotation=90)
 
     fig.legend(
-        list(set(legend_handles)),
-        list(set(legend_labels)),
+        legend_entries.values(),
+        legend_entries.keys(),
         ncol=1,
         loc="center left",
-        bbox_to_anchor=(1.001, 0.5),
+        bbox_to_anchor=(1.01, 0.5),
         fontsize=12,
         frameon=True,
         fancybox=fancy_legend
     )
-    plt.tight_layout(rect=[0, 0, 0.99, 1])  # reserve space for legend
+    plt.tight_layout(rect=[0, 0, 0.98, 1])  # reserve space for legend
 
     if save_figure:
         os.makedirs(output_path, exist_ok=True)
@@ -260,9 +258,8 @@ def plot_complex_network_summary(
     label_color_2 = {key: mcolors.to_hex(map_2(i)) for i, key in enumerate(m2)}
 
     # Figure 1 - Video
-    legend_labels_1 = []
-    legend_handles_1 = []
     fig_1, axes_1 = plt.subplots(3, 6, figsize=(width, height))
+    legend_entries_1 = {}
 
     # Complexity Network - Metrics
     complex_network_titles = [
@@ -301,7 +298,7 @@ def plot_complex_network_summary(
                 xlabel = "Window size ($\\omega$)"
 
                 # Plot error bars
-                axes_1[label][j].errorbar(
+                line = axes_1[label][j].errorbar(
                     x,
                     ym,
                     xerr=xs,
@@ -312,9 +309,8 @@ def plot_complex_network_summary(
                     lw=0.7,
                     fmt="o",
                     color=color
-                )
-                legend_handles_1.append(axes_1[label][j].lines[-1])
-                legend_labels_1.append(title)
+                )[0]
+                legend_entries_1[title] = line
 
             # Axis labels
             for j in range(6):
@@ -323,9 +319,8 @@ def plot_complex_network_summary(
                 axes_1[label][j].set_ylabel(ylabel, fontsize=14)
 
     # Figure 2 - Sex ratio
-    legend_labels_2 = []
-    legend_handles_2 = []
     fig_2, axes_2 = plt.subplots(3, 6, figsize=(width, height))
+    legend_entries_2 = {}
 
     for group in sorted(k2["sex_ratio"].unique()):
         particles = group[0]
@@ -354,7 +349,7 @@ def plot_complex_network_summary(
                 xlabel = "Window size ($\\omega$)"
 
                 # Plot error bars
-                axes_2[label][j].errorbar(
+                line = axes_2[label][j].errorbar(
                     x,
                     ym,
                     xerr=xs,
@@ -365,9 +360,8 @@ def plot_complex_network_summary(
                     lw=0.7,
                     fmt="o",
                     color=color
-                )
-                legend_handles_2.append(axes_2[label][j].lines[-1])
-                legend_labels_2.append(title)
+                )[0]
+                legend_entries_2[title] = line
 
             # Axis labels
             for j in range(6):
@@ -402,28 +396,28 @@ def plot_complex_network_summary(
                 ax[i][j].tick_params(axis="x", labelrotation=90)
 
     fig_1.legend(
-        list(set(legend_handles_1)),
-        list(set(legend_labels_1)),
+        legend_entries_1.values(),
+        legend_entries_1.keys(),
         ncol=1,
         loc="center left",
-        bbox_to_anchor=(1.001, 0.5),
+        bbox_to_anchor=(1.01, 0.5),
         fontsize=12,
         frameon=False,
         fancybox=fancy_legend
     )
-    fig_1.tight_layout(rect=[0, 0, 0.99, 1])  # reserve space for legend
+    fig_1.tight_layout(rect=[0, 0, 0.98, 1])  # reserve space for legend
 
     fig_2.legend(
-        list(set(legend_handles_2)),
-        list(set(legend_labels_2)),
+        legend_entries_2.values(),
+        legend_entries_2.keys(),
         ncol=1,
         loc="center left",
-        bbox_to_anchor=(1.001, 0.5),
+        bbox_to_anchor=(1.01, 0.5),
         fontsize=12,
         frameon=False,
         fancybox=fancy_legend
     )
-    fig_2.tight_layout(rect=[0, 0, 0.99, 1])  # reserve space for legend
+    fig_2.tight_layout(rect=[0, 0, 0.98, 1])  # reserve space for legend
 
     if save_figures:
         os.makedirs(output_path, exist_ok=True)

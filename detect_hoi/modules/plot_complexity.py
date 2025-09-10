@@ -126,8 +126,7 @@ def plot_gliding_complexity(
     output_name : string
         Name of the output. Default value is "plot_gliding"
     """
-    legend_labels = []
-    legend_handles = []
+    legend_entries = {}
     dicc_colors = {"2": "plasma", "3": "cool", "4": "copper"}
     fig, axes = plt.subplots(2, 3, figsize=(width, height))
     for video in df_complexity["video"].unique():
@@ -161,7 +160,7 @@ def plot_gliding_complexity(
                 else:
                     x = s
                     xlabel = "Window size ($\\omega$)"
-                axes[j // 3][j % 3].plot(
+                line = axes[j // 3][j % 3].plot(
                     x,
                     y,
                     label=title,
@@ -169,9 +168,8 @@ def plot_gliding_complexity(
                     color=colors[m],
                     ls="",
                     ms=4
-                )
-                legend_handles.append(axes[j // 3][j % 3].lines[-1])
-                legend_labels.append(title)
+                )[0]
+                legend_entries[title] = line
 
                 # Axes labels
                 axes[j // 3][j % 3].set_xlabel(xlabel, fontsize=14)
@@ -209,16 +207,16 @@ def plot_gliding_complexity(
             axes[i][j].tick_params(axis="x", labelrotation=90)
 
     fig.legend(
-        list(set(legend_handles)),
-        list(set(legend_labels)),
+        legend_entries.values(),
+        legend_entries.keys(),
         ncol=1,
         loc="center left",
-        bbox_to_anchor=(1.001, 0.5),
+        bbox_to_anchor=(1.01, 0.5),
         fontsize=12,
         frameon=True,
         fancybox=fancy_legend
     )
-    plt.tight_layout(rect=[0, 0, 0.99, 1])  # reserve space for legend
+    plt.tight_layout(rect=[0, 0, 0.98, 1])  # reserve space for legend
 
     if save_figure:
         os.makedirs(output_path, exist_ok=True)
@@ -287,16 +285,20 @@ def plot_complexity_metrics_summary(
     map_2 = cm.get_cmap("plasma", len(m2))
     label_color_2 = {key: mcolors.to_hex(map_2(i)) for i, key in enumerate(m2)}
 
-    # Figure 1 - Video
-    legend_labels_1 = []
-    legend_handles_1 = []
-    fig_1, axes_1 = plt.subplots(3, 6, figsize=(width, height))
-
     # Complexity - Metrics
     complexity_metrics = [
-        "H_distance", "PE_distance", "C_distance",
-        "H_orientation", "PE_orientation", "C_orientation"
+        # "H_distance",
+        # "PE_distance",
+        "C_distance",
+        # "H_orientation",
+        # "PE_orientation",
+        "C_orientation"
     ]
+
+    # Figure 1 - Video
+    cols = len(complexity_metrics)
+    fig_1, axes_1 = plt.subplots(3, cols, figsize=(width, height))
+    legend_entries_1 = {}
 
     for group in sorted(k1["video"].unique()):
         particles = group[0]
@@ -320,11 +322,11 @@ def plot_complexity_metrics_summary(
                 ym = df_aux[m_mean].values
                 ys = df_aux[m_std].values
 
-                if j == 2:
+                if j == 0:
                     x = df_aux["PE_distance_mean_1"].values
                     xs = df_aux["PE_distance_std_1"].values
                     xlabel = r"$S_{" + particles + r"}^{D}(t)$"
-                elif j == 5:
+                elif j == 1:
                     x = df_aux["PE_orientation_mean_1"].values
                     xs = df_aux["PE_orientation_std_1"].values
                     xlabel = r"$S_{" + particles + r"}^{\theta}(t)$"
@@ -334,7 +336,7 @@ def plot_complexity_metrics_summary(
                     xlabel = "Window size ($\\omega$)"
 
                 # Plot error bars
-                axes_1[label][j].errorbar(
+                line = axes_1[label][j].errorbar(
                     x,
                     ym,
                     xerr=xs,
@@ -345,24 +347,22 @@ def plot_complexity_metrics_summary(
                     lw=0.7,
                     fmt="o",
                     color=color
-                )
-                legend_handles_1.append(axes_1[label][j].lines[-1])
-                legend_labels_1.append(title)
+                )[0]
+                legend_entries_1[title] = line
 
             # Axis labels
-            for j in range(6):
+            for j in range(cols):
                 axes_1[label][j].set_xlabel(xlabel, fontsize=14)
-            axes_1[label][0].set_ylabel(r"$H_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
-            axes_1[label][1].set_ylabel(r"$PE_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
-            axes_1[label][2].set_ylabel(r"$C_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
-            axes_1[label][3].set_ylabel(r"$H_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
-            axes_1[label][4].set_ylabel(r"$PE_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
-            axes_1[label][5].set_ylabel(r"$C_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
+            # axes_1[label][0].set_ylabel(r"$H_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
+            # axes_1[label][1].set_ylabel(r"$PE_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
+            axes_1[label][0].set_ylabel(r"$C_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
+            # axes_1[label][2].set_ylabel(r"$H_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
+            # axes_1[label][4].set_ylabel(r"$PE_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
+            axes_1[label][1].set_ylabel(r"$C_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
 
     # Figure 2 - Sex ratio
-    legend_labels_2 = []
-    legend_handles_2 = []
-    fig_2, axes_2 = plt.subplots(3, 6, figsize=(width, height))
+    fig_2, axes_2 = plt.subplots(3, cols, figsize=(width, height))
+    legend_entries_2 = {}
 
     for group in sorted(k2["sex_ratio"].unique()):
         particles = group[0]
@@ -386,11 +386,11 @@ def plot_complexity_metrics_summary(
                 ym = df_aux[m_mean].values
                 ys = df_aux[m_std].values
 
-                if j == 2:
+                if j == 0:
                     x = df_aux["PE_distance_mean_2"].values
                     xs = df_aux["PE_distance_std_2"].values
                     xlabel = r"$S_{" + particles + r"}^{D}(t)$"
-                elif j == 5:
+                elif j == 1:
                     x = df_aux["PE_orientation_mean_2"].values
                     xs = df_aux["PE_orientation_std_2"].values
                     xlabel = r"$S_{" + particles + r"}^{\theta}(t)$"
@@ -400,7 +400,7 @@ def plot_complexity_metrics_summary(
                     xlabel = "Window size ($\\omega$)"
 
                 # Plot error bars
-                axes_2[label][j].errorbar(
+                line = axes_2[label][j].errorbar(
                     x,
                     ym,
                     xerr=xs,
@@ -411,23 +411,22 @@ def plot_complexity_metrics_summary(
                     lw=0.7,
                     fmt="o",
                     color=color
-                )
-                legend_handles_2.append(axes_2[label][j].lines[-1])
-                legend_labels_2.append(title)
+                )[0]
+                legend_entries_2[title] = line
 
             # Axis labels
-            for j in range(6):
+            for j in range(cols):
                 axes_2[label][j].set_xlabel(xlabel, fontsize=14)
-            axes_2[label][0].set_ylabel(r"$H_{" + particles + r"}^{D}(t)$", fontsize=14)  # noqa: 501
-            axes_2[label][1].set_ylabel(r"$PE_{" + particles + r"}^{D}(t)$", fontsize=14)  # noqa: 501
-            axes_2[label][2].set_ylabel(r"$C_{" + particles + r"}^{D}(t)$", fontsize=14)  # noqa: 501
-            axes_2[label][3].set_ylabel(r"$H_{" + particles + r"}^{\theta}(t)$", fontsize=14)  # noqa: 501
-            axes_2[label][4].set_ylabel(r"$PE_{" + particles + r"}^{\theta}(t)$", fontsize=14)  # noqa: 501
-            axes_2[label][5].set_ylabel(r"$C_{" + particles + r"}^{\theta}(t)$", fontsize=14)  # noqa: 501
+            # axes_2[label][0].set_ylabel(r"$H_{" + particles + r"}^{D}(t)$", fontsize=14)  # noqa: 501
+            # axes_2[label][1].set_ylabel(r"$PE_{" + particles + r"}^{D}(t)$", fontsize=14)  # noqa: 501
+            axes_2[label][0].set_ylabel(r"$C_{" + particles + r"}^{D}(t)$", fontsize=14)  # noqa: 501
+            # axes_2[label][2].set_ylabel(r"$H_{" + particles + r"}^{\theta}(t)$", fontsize=14)  # noqa: 501
+            # axes_2[label][4].set_ylabel(r"$PE_{" + particles + r"}^{\theta}(t)$", fontsize=14)  # noqa: 501
+            axes_2[label][1].set_ylabel(r"$C_{" + particles + r"}^{\theta}(t)$", fontsize=14)  # noqa: 501
 
     # Styling
     for i in range(3):
-        for j in range(6):
+        for j in range(cols):
             for ax in [axes_1, axes_2]:
                 ax[i][j].tick_params(
                     which="major",
@@ -452,28 +451,28 @@ def plot_complexity_metrics_summary(
                 ax[i][j].tick_params(axis="x", labelrotation=90)
 
     fig_1.legend(
-        list(set(legend_handles_1)),
-        list(set(legend_labels_1)),
+        legend_entries_1.values(),
+        legend_entries_1.keys(),
         ncol=1,
         loc="center left",
-        bbox_to_anchor=(1.001, 0.5),
+        bbox_to_anchor=(1.01, 0.5),
         fontsize=12,
         frameon=False,
         fancybox=fancy_legend
     )
-    fig_1.tight_layout(rect=[0, 0, 0.99, 1])  # reserve space for legend
+    fig_1.tight_layout(rect=[0, 0, 0.98, 1])  # reserve space for legend
 
     fig_2.legend(
-        list(set(legend_handles_2)),
-        list(set(legend_labels_2)),
+        legend_entries_2.values(),
+        legend_entries_2.keys(),
         ncol=1,
         loc="center left",
-        bbox_to_anchor=(1.001, 0.5),
+        bbox_to_anchor=(1.01, 0.5),
         fontsize=12,
         frameon=False,
         fancybox=fancy_legend
     )
-    fig_2.tight_layout(rect=[0, 0, 0.99, 1])  # reserve space for legend
+    fig_2.tight_layout(rect=[0, 0, 0.98, 1])  # reserve space for legend
 
     if save_figures:
         os.makedirs(output_path, exist_ok=True)

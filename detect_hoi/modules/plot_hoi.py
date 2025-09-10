@@ -132,8 +132,7 @@ def plot_gliding_oinfo(
     output_name : string
         Name of the output. Default value is "plot_gliding"
     """
-    legend_labels = []
-    legend_handles = []
+    legend_entries = {}
     dicc_colors = {"2": "plasma", "3": "cool", "4": "copper"}
     fig, axes = plt.subplots(1, 4, figsize=(width, height))
     for video in df_oinfo["video"].unique():
@@ -166,7 +165,7 @@ def plot_gliding_oinfo(
                     ls="--",
                     lw=0.8
                 )
-                axes[j].plot(
+                line = axes[j].plot(
                     s,
                     y,
                     label=title,
@@ -174,9 +173,8 @@ def plot_gliding_oinfo(
                     color=colors[m],
                     ls="",
                     ms=4
-                )
-                legend_handles.append(axes[j].lines[-1])
-                legend_labels.append(title)
+                )[0]
+                legend_entries[title] = line
 
                 # Axes labels
                 axes[j].set_xlabel("Window size ($\\omega$)", fontsize=14)
@@ -211,15 +209,15 @@ def plot_gliding_oinfo(
         axes[j].tick_params(axis="x", labelrotation=90)
 
     fig.legend(
-        list(set(legend_handles)),
-        list(set(legend_labels)),
+        legend_entries.values(),
+        legend_entries.keys(),
         loc="center left",
-        bbox_to_anchor=(1.001, 0.5),
+        bbox_to_anchor=(1.01, 0.5),
         fontsize=12,
         frameon=False,
         fancybox=fancy_legend
     )
-    plt.tight_layout(rect=[0, 0, 0.99, 1])  # reserve space for legend
+    plt.tight_layout(rect=[0, 0, 0.98, 1])  # reserve space for legend
 
     if save_figure:
         os.makedirs(output_path, exist_ok=True)
@@ -298,9 +296,8 @@ def plot_hoi_metrics_summary(
     ]
 
     # Figure 1 - Video
-    legend_labels_1 = []
-    legend_handles_1 = []
     fig_1, axes_1 = plt.subplots(2, len(hoi_metrics), figsize=(width, height))
+    legend_entries_1 = {}
 
     for group in sorted(k1["video"].unique()):
         particles = group[0]
@@ -335,7 +332,7 @@ def plot_hoi_metrics_summary(
                 )
 
                 # Plot error bars
-                axes_1[label][j].errorbar(
+                line = axes_1[label][j].errorbar(
                     size,
                     ym,
                     yerr=ys,
@@ -345,9 +342,8 @@ def plot_hoi_metrics_summary(
                     lw=0.7,
                     fmt="o",
                     color=color
-                )
-                legend_handles_1.append(axes_1[label][j].lines[-1])
-                legend_labels_1.append(title)
+                )[0]
+                legend_entries_1[title] = line
 
             # Axis labels
             for j in range(len(hoi_metrics)):
@@ -361,9 +357,8 @@ def plot_hoi_metrics_summary(
             # axes_1[label][3].set_ylabel(r"$S_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
 
     # Figure 2 - Sex ratio
-    legend_labels_2 = []
-    legend_handles_2 = []
     fig_2, axes_2 = plt.subplots(2, len(hoi_metrics), figsize=(width, height))
+    legend_entries_2 = {}
 
     for group in sorted(k2["sex_ratio"].unique()):
         particles = group[0]
@@ -398,7 +393,7 @@ def plot_hoi_metrics_summary(
                 )
 
                 # Plot error bars
-                axes_2[label][j].errorbar(
+                line = axes_2[label][j].errorbar(
                     size,
                     ym,
                     yerr=ys,
@@ -408,10 +403,8 @@ def plot_hoi_metrics_summary(
                     lw=0.7,
                     fmt="o",
                     color=color
-                )
-
-                legend_handles_2.append(axes_2[label][j].lines[-1])
-                legend_labels_2.append(title)
+                )[0]
+                legend_entries_2[title] = line
 
             # Axis labels
             for j in range(len(hoi_metrics)):
@@ -451,26 +444,26 @@ def plot_hoi_metrics_summary(
                 ax[i][j].tick_params(axis="x", labelrotation=90)
 
     fig_1.legend(
-        list(set(legend_handles_1)),
-        list(set(legend_labels_1)),
+        legend_entries_1.values(),
+        legend_entries_1.keys(),
         loc="center left",
-        bbox_to_anchor=(1.001, 0.5),
+        bbox_to_anchor=(1.01, 0.5),
         fontsize=12,
         frameon=False,
         fancybox=fancy_legend
     )
-    fig_1.tight_layout(rect=[0, 0, 0.99, 1])  # reserve space for legend
+    fig_1.tight_layout(rect=[0, 0, 0.98, 1])  # reserve space for legend
 
     fig_2.legend(
-        list(set(legend_handles_2)),
-        list(set(legend_labels_2)),
+        legend_entries_2.values(),
+        legend_entries_2.keys(),
         loc="center left",
-        bbox_to_anchor=(1.001, 0.5),
+        bbox_to_anchor=(1.01, 0.5),
         fontsize=12,
         frameon=False,
         fancybox=fancy_legend
     )
-    fig_2.tight_layout(rect=[0, 0, 0.99, 1])  # reserve space for legend
+    fig_2.tight_layout(rect=[0, 0, 0.98, 1])  # reserve space for legend
 
     if save_figures:
         os.makedirs(output_path, exist_ok=True)
