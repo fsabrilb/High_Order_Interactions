@@ -32,6 +32,11 @@ To improve tracking consistency, the following steps are applied:
 
 Finally, a Tkinter-based application for visualizing cockroach tracking data is built. Allows users to load CSV files, display tracking data, edit positions, and navigate through frames using keyboard shortcuts. with a user-friendly interface.
 
+For the deployment of the application it is recommended to create a new folder in the same folder where the MP4 video is allocated, and to transform MP4 video frames as PNG frames with `ffmpeg` in the following command:
+
+```ffmpeg -i video_name.mp4 -vf "select=not(mod(n\,3))" -vsync vfr -frame_pts 1 -q:v 10 "video_name/frame_%06d.png"
+```
+
 ### Features
 - Open `.txt` or `.csv` files.
 - Save text to `.txt` or `.csv` files.

@@ -9,10 +9,8 @@ Created on Friday March 6th 2025
 import os
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
-# import matplotlib.cm as cm  # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
 import matplotlib.ticker as mtick  # type: ignore
-# import matplotlib.colors as mcolors  # type: ignore
 
 
 # Plot cross-recurrence quantification analysis (CRQA) ----
@@ -60,12 +58,12 @@ def plot_crqa(
     """
     # Options for plotting - Title, Position
     dicc_vars = {
-        "RR": ["Recurrence ratio", [0, 0]],
-        "DET": ["Determinism", [1, 0]],
-        "L": ["Average diagonal line length", [0, 1]],
-        "ENTR": ["Entropy of diagonal line length", [1, 1]],
-        "LAM": ["Laminarity", [0, 2]],
-        "TT": ["Trapping Time", [1, 2]]
+        "RR": [r"Recurrence ratio ($\rho$)", [0, 0]],
+        "DET": [r"Determinism ($\mathfrak{D}$)", [1, 0]],
+        "L": [r"Average diagonal line length ($\bar{L}$)", [0, 1]],
+        "ENTR": [r"Entropy of diagonal line length ($E$)", [1, 1]],
+        "LAM": [r"Laminarity ($\Lambda$)", [0, 2]],
+        "TT": [r"Trapping Time ($T^{v}$)", [1, 2]]
     }
     df = df_metrics.copy()
     df["particles"] = df["video"].str[0]
@@ -119,7 +117,7 @@ def plot_crqa(
         axes[x][y].set_xlabel("Sex Ratio")
         axes[x][y].yaxis.set_major_locator(mtick.MaxNLocator(n_y_breaks))
         axes[x][y].yaxis.set_minor_locator(mtick.MaxNLocator(5 * n_y_breaks))
-        axes[x][y].set_ylabel(title, fontsize=14)
+        axes[x][y].set_ylabel(title, fontsize=12)
         axes[x][y].tick_params(
             which="major",
             direction="in",

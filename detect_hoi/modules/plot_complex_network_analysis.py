@@ -257,19 +257,28 @@ def plot_complex_network_summary(
     map_2 = cm.get_cmap("plasma", len(m2))
     label_color_2 = {key: mcolors.to_hex(map_2(i)) for i, key in enumerate(m2)}
 
-    # Figure 1 - Video
-    fig_1, axes_1 = plt.subplots(3, 6, figsize=(width, height))
-    legend_entries_1 = {}
-
     # Complexity Network - Metrics
     complex_network_titles = [
-        "Transitivity", "Average Shortest Path", "Mean degree",
-        "Average Clustering", "Radius", "Heterogeneity"
+        "Transitivity",
+        # "Average Shortest Path",
+        "Mean degree",
+        "Average Clustering",
+        "Radius"  # ,
+        # "Heterogeneity"
     ]
     complex_network_metrics = [
-        "transitivity", "avg_shortest_path", "mean_degree",
-        "avg_clustering", "radius", "heterogeneity"
+        "transitivity",
+        # "avg_shortest_path",
+        "mean_degree",
+        "avg_clustering",
+        "radius"  # ,
+        # "heterogeneity"
     ]
+
+    # Figure 1 - Video
+    cols = len(complex_network_metrics)
+    fig_1, axes_1 = plt.subplots(3, cols, figsize=(width, height))
+    legend_entries_1 = {}
 
     for group in sorted(k1["video"].unique()):
         particles = group[0]
@@ -311,15 +320,12 @@ def plot_complex_network_summary(
                     color=color
                 )[0]
                 legend_entries_1[title] = line
-
-            # Axis labels
-            for j in range(6):
                 ylabel = complex_network_titles[j] + " ($N=" + particles + "$)"
                 axes_1[label][j].set_xlabel(xlabel, fontsize=14)
                 axes_1[label][j].set_ylabel(ylabel, fontsize=14)
 
     # Figure 2 - Sex ratio
-    fig_2, axes_2 = plt.subplots(3, 6, figsize=(width, height))
+    fig_2, axes_2 = plt.subplots(3, cols, figsize=(width, height))
     legend_entries_2 = {}
 
     for group in sorted(k2["sex_ratio"].unique()):
@@ -362,16 +368,13 @@ def plot_complex_network_summary(
                     color=color
                 )[0]
                 legend_entries_2[title] = line
-
-            # Axis labels
-            for j in range(6):
                 ylabel = complex_network_titles[j] + " ($N=" + particles + "$)"
                 axes_2[label][j].set_xlabel(xlabel, fontsize=14)
                 axes_2[label][j].set_ylabel(ylabel, fontsize=14)
 
     # Styling
     for i in range(3):
-        for j in range(6):
+        for j in range(cols):
             for ax in [axes_1, axes_2]:
                 ax[i][j].tick_params(
                     which="major",

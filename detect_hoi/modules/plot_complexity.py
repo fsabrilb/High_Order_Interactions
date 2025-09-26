@@ -287,10 +287,10 @@ def plot_complexity_metrics_summary(
 
     # Complexity - Metrics
     complexity_metrics = [
-        # "H_distance",
+        "H_distance",
         # "PE_distance",
         "C_distance",
-        # "H_orientation",
+        "H_orientation",
         # "PE_orientation",
         "C_orientation"
     ]
@@ -322,14 +322,14 @@ def plot_complexity_metrics_summary(
                 ym = df_aux[m_mean].values
                 ys = df_aux[m_std].values
 
-                if j == 0:
+                if j == 1:
                     x = df_aux["PE_distance_mean_1"].values
                     xs = df_aux["PE_distance_std_1"].values
-                    xlabel = r"$S_{" + particles + r"}^{D}(t)$"
-                elif j == 1:
+                    xlabel = r"$\mathcal{H}_{" + particles + r"}^{D}$"
+                elif j == 3:
                     x = df_aux["PE_orientation_mean_1"].values
                     xs = df_aux["PE_orientation_std_1"].values
-                    xlabel = r"$S_{" + particles + r"}^{\theta}(t)$"
+                    xlabel = r"$\mathcal{H}_{" + particles + r"}^{\theta}$"
                 else:
                     x = size
                     xs = np.zeros(len(df_aux))
@@ -349,16 +349,14 @@ def plot_complexity_metrics_summary(
                     color=color
                 )[0]
                 legend_entries_1[title] = line
-
-            # Axis labels
-            for j in range(cols):
                 axes_1[label][j].set_xlabel(xlabel, fontsize=14)
-            # axes_1[label][0].set_ylabel(r"$H_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
+
+            axes_1[label][0].set_ylabel(r"$\mathcal{H}_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
             # axes_1[label][1].set_ylabel(r"$PE_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
-            axes_1[label][0].set_ylabel(r"$C_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
-            # axes_1[label][2].set_ylabel(r"$H_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
+            axes_1[label][1].set_ylabel(r"$C_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
+            axes_1[label][2].set_ylabel(r"$\mathcal{H}_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
             # axes_1[label][4].set_ylabel(r"$PE_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
-            axes_1[label][1].set_ylabel(r"$C_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
+            axes_1[label][3].set_ylabel(r"$C_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
 
     # Figure 2 - Sex ratio
     fig_2, axes_2 = plt.subplots(3, cols, figsize=(width, height))
@@ -386,14 +384,14 @@ def plot_complexity_metrics_summary(
                 ym = df_aux[m_mean].values
                 ys = df_aux[m_std].values
 
-                if j == 0:
+                if j == 1:
                     x = df_aux["PE_distance_mean_2"].values
                     xs = df_aux["PE_distance_std_2"].values
-                    xlabel = r"$S_{" + particles + r"}^{D}(t)$"
-                elif j == 1:
+                    xlabel = r"$\mathcal{H}_{" + particles + r"}^{D}(t)$"
+                elif j == 3:
                     x = df_aux["PE_orientation_mean_2"].values
                     xs = df_aux["PE_orientation_std_2"].values
-                    xlabel = r"$S_{" + particles + r"}^{\theta}(t)$"
+                    xlabel = r"$\mathcal{H}_{" + particles + r"}^{\theta}(t)$"
                 else:
                     x = size
                     xs = np.zeros(len(df_aux))
@@ -413,16 +411,14 @@ def plot_complexity_metrics_summary(
                     color=color
                 )[0]
                 legend_entries_2[title] = line
-
-            # Axis labels
-            for j in range(cols):
                 axes_2[label][j].set_xlabel(xlabel, fontsize=14)
-            # axes_2[label][0].set_ylabel(r"$H_{" + particles + r"}^{D}(t)$", fontsize=14)  # noqa: 501
-            # axes_2[label][1].set_ylabel(r"$PE_{" + particles + r"}^{D}(t)$", fontsize=14)  # noqa: 501
-            axes_2[label][0].set_ylabel(r"$C_{" + particles + r"}^{D}(t)$", fontsize=14)  # noqa: 501
-            # axes_2[label][2].set_ylabel(r"$H_{" + particles + r"}^{\theta}(t)$", fontsize=14)  # noqa: 501
-            # axes_2[label][4].set_ylabel(r"$PE_{" + particles + r"}^{\theta}(t)$", fontsize=14)  # noqa: 501
-            axes_2[label][1].set_ylabel(r"$C_{" + particles + r"}^{\theta}(t)$", fontsize=14)  # noqa: 501
+
+            axes_2[label][0].set_ylabel(r"$\mathcal{H}_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
+            # axes_2[label][1].set_ylabel(r"$PE_{" + particles + r"}^{D}$", fontsize=14)  # noqa: 501
+            axes_2[label][1].set_ylabel(r"$C_{" + particles + r"}^{D}$", fontsize=14)  # noqa: 501
+            axes_2[label][2].set_ylabel(r"$\mathcal{H}_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
+            # axes_2[label][4].set_ylabel(r"$PE_{" + particles + r"}^{\theta}$", fontsize=14)  # noqa: 501
+            axes_2[label][3].set_ylabel(r"$C_{" + particles + r"}^{\theta}$", fontsize=14)  # noqa: 501
 
     # Styling
     for i in range(3):
