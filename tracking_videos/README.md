@@ -34,8 +34,9 @@ Finally, a Tkinter-based application for visualizing cockroach tracking data is 
 
 For the deployment of the application it is recommended to create a new folder in the same folder where the MP4 video is allocated, and to transform MP4 video frames as PNG frames with `ffmpeg` in the following command:
 
-```ffmpeg -i video_name.mp4 -vf "select=not(mod(n\,3))" -vsync vfr -frame_pts 1 -q:v 10 "video_name/frame_%06d.png"
-```
+   ```sh
+   ffmpeg -i video_name.mp4 -vf "select=not(mod(n\,3))" -vsync vfr -frame_pts 1 -q:v 10 "video_name/frame_%06d.png"
+   ```
 
 ### Features
 - Open `.txt` or `.csv` files.

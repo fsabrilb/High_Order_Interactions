@@ -275,6 +275,7 @@ def plot_complexity_metrics_summary(
         Name of the outputs. Default value is "plot_gliding_summary"
     """
     k1, k2 = summarize_metrics(df_complexity=df_complexity)
+    dicc_g = {0: "o", 1: "v", 2: "s", 3: "D"}
 
     # Unique keys and combinations and color mapping
     m1 = k1["label_key"].unique()
@@ -345,18 +346,18 @@ def plot_complexity_metrics_summary(
                     capsize=5,
                     ls="--",
                     lw=0.7,
-                    fmt="o",
+                    fmt=dicc_g[m],
                     color=color
                 )[0]
                 legend_entries_1[title] = line
                 axes_1[label][j].set_xlabel(xlabel, fontsize=14)
 
-            axes_1[label][0].set_ylabel(r"$\mathcal{H}_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
+            axes_1[label][0].set_ylabel(r"$\mathfrak{h}_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
             # axes_1[label][1].set_ylabel(r"$PE_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
-            axes_1[label][1].set_ylabel(r"$C_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
-            axes_1[label][2].set_ylabel(r"$\mathcal{H}_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
+            axes_1[label][1].set_ylabel(r"$C_{" + particles + r"}^{D}$", fontsize=14)  # noqa: 501
+            axes_1[label][2].set_ylabel(r"$\mathfrak{h}_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
             # axes_1[label][4].set_ylabel(r"$PE_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
-            axes_1[label][3].set_ylabel(r"$C_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
+            axes_1[label][3].set_ylabel(r"$C_{" + particles + r"}^{\theta}$", fontsize=14)  # noqa: 501
 
     # Figure 2 - Sex ratio
     fig_2, axes_2 = plt.subplots(3, cols, figsize=(width, height))
@@ -387,11 +388,11 @@ def plot_complexity_metrics_summary(
                 if j == 1:
                     x = df_aux["PE_distance_mean_2"].values
                     xs = df_aux["PE_distance_std_2"].values
-                    xlabel = r"$\mathcal{H}_{" + particles + r"}^{D}(t)$"
+                    xlabel = r"$\mathcal{H}_{" + particles + r"}^{D}$"
                 elif j == 3:
                     x = df_aux["PE_orientation_mean_2"].values
                     xs = df_aux["PE_orientation_std_2"].values
-                    xlabel = r"$\mathcal{H}_{" + particles + r"}^{\theta}(t)$"
+                    xlabel = r"$\mathcal{H}_{" + particles + r"}^{\theta}$"
                 else:
                     x = size
                     xs = np.zeros(len(df_aux))
@@ -407,16 +408,16 @@ def plot_complexity_metrics_summary(
                     capsize=5,
                     ls="--",
                     lw=0.7,
-                    fmt="o",
+                    fmt=dicc_g[m],
                     color=color
                 )[0]
                 legend_entries_2[title] = line
                 axes_2[label][j].set_xlabel(xlabel, fontsize=14)
 
-            axes_2[label][0].set_ylabel(r"$\mathcal{H}_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
+            axes_2[label][0].set_ylabel(r"$\mathfrak{h}_{" + particles + r"}^{D}(\omega)$", fontsize=14)  # noqa: 501
             # axes_2[label][1].set_ylabel(r"$PE_{" + particles + r"}^{D}$", fontsize=14)  # noqa: 501
             axes_2[label][1].set_ylabel(r"$C_{" + particles + r"}^{D}$", fontsize=14)  # noqa: 501
-            axes_2[label][2].set_ylabel(r"$\mathcal{H}_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
+            axes_2[label][2].set_ylabel(r"$\mathfrak{h}_{" + particles + r"}^{\theta}(\omega)$", fontsize=14)  # noqa: 501
             # axes_2[label][4].set_ylabel(r"$PE_{" + particles + r"}^{\theta}$", fontsize=14)  # noqa: 501
             axes_2[label][3].set_ylabel(r"$C_{" + particles + r"}^{\theta}$", fontsize=14)  # noqa: 501
 

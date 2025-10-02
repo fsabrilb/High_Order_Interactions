@@ -279,6 +279,7 @@ def plot_hoi_metrics_summary(
         Name of the outputs. Default value is "plot_gliding_summary"
     """
     k1, k2 = summarize_metrics(df_oinfo=df_oinfo)
+    dicc_m = {"012": "o", "013": "v", "023": "s", "123": "D", "0123": "*"}
 
     # Unique keys and combinations and color mapping
     m1 = k1["label_key"].unique()
@@ -340,7 +341,7 @@ def plot_hoi_metrics_summary(
                     capsize=5,
                     ls="--",
                     lw=0.7,
-                    fmt="o",
+                    fmt=dicc_m[m],
                     color=color
                 )[0]
                 legend_entries_1[title] = line
@@ -401,7 +402,7 @@ def plot_hoi_metrics_summary(
                     capsize=5,
                     ls="--",
                     lw=0.7,
-                    fmt="o",
+                    fmt=dicc_m[m],
                     color=color
                 )[0]
                 legend_entries_2[title] = line

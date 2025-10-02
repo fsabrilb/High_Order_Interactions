@@ -247,6 +247,7 @@ def plot_complex_network_summary(
         Name of the outputs. Default value is "plot_gliding_summary"
     """
     k1, k2 = summarize_metrics(df_network_all=df_network_all)
+    dicc_g = {0: "o", 1: "v", 2: "s", 3: "D"}
 
     # Unique keys and combinations and color mapping
     m1 = k1["label_key"].unique()
@@ -316,7 +317,7 @@ def plot_complex_network_summary(
                     capsize=5,
                     ls="--",
                     lw=0.7,
-                    fmt="o",
+                    fmt=dicc_g[m],
                     color=color
                 )[0]
                 legend_entries_1[title] = line
@@ -364,7 +365,7 @@ def plot_complex_network_summary(
                     capsize=5,
                     ls="--",
                     lw=0.7,
-                    fmt="o",
+                    fmt=dicc_g[m],
                     color=color
                 )[0]
                 legend_entries_2[title] = line
